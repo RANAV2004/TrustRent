@@ -1,0 +1,277 @@
+[
+  {
+    "city": "Indore",
+    "min_months": 6,
+    "max_months": 22,
+    "id": "IND-VN-101",
+    "title": "Furnished 1 BHK near C21 Mall",
+    "locality": "Vijay Nagar",
+    "pincode": "452010",
+    "lat": 22.7521,
+    "lng": 75.8952,
+    "rent": 20000,
+    "deposit": 40000,
+    "bhk": 1,
+    "furnishing": "furnished",
+    "area_sqft": 650,
+    "amenities": [
+      "ac",
+      "wifi",
+      "lift",
+      "power_backup",
+      "security",
+      "washing_machine",
+      "water_24x7",
+      "parking"
+    ],
+    "preferred_tenants": [
+      "bachelor_male",
+      "bachelor_female",
+      "any"
+    ],
+    "available_from": "2026-11-05",
+    "listed_days_ago": 9,
+    "photos": [
+      "https://images.unsplash.com/photo-1628592102751-ba83b0314276?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549499090-c9203d2b20ad?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Fully furnished 1 BHK on the 3rd floor of Sapphire Heights, a five-minute walk from C21 Mall and Vijay Nagar square. Split AC in the bedroom, double bed, wardrobe, sofa, fridge, washing machine and a modular kitchen with chimney. 24x7 Narmada water, lift and power backup for common areas. Suits a working professional; IT parks on the Super Corridor are 15 minutes away.",
+    "about_owner": "I'm a bank officer and live in the same building on the 1st floor. I reply the same day and prefer tenants who can stay at least a year.",
+    "landlord": {
+      "name": "Anjali Mehta",
+      "verified": true,
+      "tenancies_completed": 4,
+      "full_refunds": 4,
+      "disputes_lost": 0
+    }
+  },
+  {
+    "city": "Indore",
+    "min_months": 11,
+    "max_months": 22,
+    "id": "IND-VN-102",
+    "title": "Spacious 2 BHK in Scheme 54",
+    "locality": "Vijay Nagar",
+    "pincode": "452010",
+    "lat": 22.758,
+    "lng": 75.8968,
+    "rent": 26000,
+    "deposit": 52000,
+    "bhk": 2,
+    "furnishing": "semi-furnished",
+    "area_sqft": 1050,
+    "amenities": [
+      "parking",
+      "lift",
+      "power_backup",
+      "security",
+      "balcony",
+      "water_24x7"
+    ],
+    "preferred_tenants": [
+      "family",
+      "any"
+    ],
+    "available_from": "2026-11-15",
+    "listed_days_ago": 0,
+    "photos": [
+      "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1667375185276-13b00bf723bc?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1557752624-e5fa8fdcdf5e?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1760894492960-5b0a2da0676d?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Bright corner 2 BHK in Scheme 54 with cross ventilation and a balcony facing the park. Wardrobes in both bedrooms, modular kitchen, geysers and fans and lights fitted. Covered parking for one car. Bombay Hospital, schools and Vijay Nagar market are close by.",
+    "about_owner": "Retired schoolteacher. My son manages the flat; we keep maintenance up to date and prefer families.",
+    "landlord": {
+      "name": "Ramesh Joshi",
+      "verified": true,
+      "tenancies_completed": 2,
+      "full_refunds": 2,
+      "disputes_lost": 0
+    }
+  },
+  {
+    "city": "Indore",
+    "min_months": 11,
+    "max_months": 36,
+    "id": "IND-VN-103",
+    "title": "3 BHK family flat near Bombay Hospital",
+    "locality": "Vijay Nagar",
+    "pincode": "452010",
+    "lat": 22.7487,
+    "lng": 75.8996,
+    "rent": 35000,
+    "deposit": 105000,
+    "bhk": 3,
+    "furnishing": "semi-furnished",
+    "area_sqft": 1500,
+    "amenities": [
+      "parking",
+      "lift",
+      "power_backup",
+      "security",
+      "gym",
+      "balcony",
+      "water_24x7"
+    ],
+    "preferred_tenants": [
+      "family"
+    ],
+    "available_from": "2026-12-01",
+    "listed_days_ago": 21,
+    "photos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1587023705100-8094f8d47e86?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1544614940-686234a602e9?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1557752742-a939ba9bee98?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1563636390022-d3c262f3004c?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Three bedrooms with two attached bathrooms, a separate dining area and two balconies, in a gated society with a gym and 24-hour security. Semi-furnished with wardrobes, modular kitchen and RO water purifier. Two covered parking spaces.",
+    "about_owner": "I work in Pune and visit Indore every month. A local caretaker handles repairs within 48 hours.",
+    "landlord": {
+      "name": "Vikram Saxena",
+      "verified": true,
+      "tenancies_completed": 3,
+      "full_refunds": 2,
+      "disputes_lost": 1
+    }
+  },
+  {
+    "city": "Indore",
+    "min_months": 11,
+    "max_months": 22,
+    "id": "IND-PY-201",
+    "title": "Affordable 2 BHK near Bangali Square",
+    "locality": "Pipliyahana",
+    "pincode": "452016",
+    "lat": 22.7149,
+    "lng": 75.9031,
+    "rent": 15000,
+    "deposit": 30000,
+    "bhk": 2,
+    "furnishing": "semi-furnished",
+    "area_sqft": 850,
+    "amenities": [
+      "parking",
+      "security",
+      "water_24x7",
+      "balcony"
+    ],
+    "preferred_tenants": [
+      "family",
+      "any"
+    ],
+    "available_from": "2026-11-10",
+    "listed_days_ago": 6,
+    "photos": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Semi-furnished 2 BHK on the service road between Bangali Square and Pipliyahana, close to schools, markets and city bus stops. Fans, lights, wardrobes and a kitchen platform with storage. Two-wheeler and car parking in the compound.",
+    "about_owner": "Small business owner in Indore. This is my only rented flat, so I take good care of it.",
+    "landlord": {
+      "name": "Suresh Patidar",
+      "verified": true,
+      "tenancies_completed": 0,
+      "full_refunds": 0,
+      "disputes_lost": 0
+    }
+  },
+  {
+    "city": "Indore",
+    "min_months": 6,
+    "max_months": 22,
+    "id": "IND-PY-202",
+    "title": "Furnished 2 BHK near Pipliyahana Talab",
+    "locality": "Pipliyahana",
+    "pincode": "452016",
+    "lat": 22.7012,
+    "lng": 75.9046,
+    "rent": 20000,
+    "deposit": 40000,
+    "bhk": 2,
+    "furnishing": "furnished",
+    "area_sqft": 914,
+    "amenities": [
+      "ac",
+      "wifi",
+      "lift",
+      "parking",
+      "power_backup",
+      "security",
+      "washing_machine",
+      "water_24x7"
+    ],
+    "preferred_tenants": [
+      "family",
+      "bachelor_female",
+      "any"
+    ],
+    "available_from": "2026-11-01",
+    "listed_days_ago": 12,
+    "photos": [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1667375185276-13b00bf723bc?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1557752624-e5fa8fdcdf5e?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1549499090-c9203d2b20ad?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Ready-to-move furnished 2 BHK a short walk from Pipliyahana Talab and the regional park. ACs in both bedrooms, beds, sofa, dining table, fridge, washing machine and Wi-Fi already connected. Lift and power backup.",
+    "about_owner": "Software engineer in Bengaluru; my parents live nearby and will show you the flat.",
+    "landlord": {
+      "name": "Neha Agrawal",
+      "verified": true,
+      "tenancies_completed": 5,
+      "full_refunds": 5,
+      "disputes_lost": 0
+    }
+  },
+  {
+    "city": "Indore",
+    "min_months": 11,
+    "max_months": 36,
+    "id": "IND-PY-203",
+    "title": "3 BHK with 2 balconies, Pipliyahana",
+    "locality": "Pipliyahana",
+    "pincode": "452016",
+    "lat": 22.7058,
+    "lng": 75.8987,
+    "rent": 35000,
+    "deposit": 70000,
+    "bhk": 3,
+    "furnishing": "semi-furnished",
+    "area_sqft": 1640,
+    "amenities": [
+      "parking",
+      "lift",
+      "power_backup",
+      "security",
+      "gym",
+      "balcony",
+      "water_24x7",
+      "pets_allowed"
+    ],
+    "preferred_tenants": [
+      "family"
+    ],
+    "available_from": "2026-11-20",
+    "listed_days_ago": 0,
+    "photos": [
+      "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1587023705100-8094f8d47e86?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1544614940-686234a602e9?w=1200&q=70&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1760894492960-5b0a2da0676d?w=1200&q=70&auto=format&fit=crop"
+    ],
+    "description": "Large 3 BHK on the 6th floor of a gated township with a clubhouse gym, children's play area and 24-hour security. Two balconies, three bathrooms, modular kitchen and wardrobes in every bedroom. Pets are welcome. Ring Road and the new airport road are a few minutes away.",
+    "about_owner": "Doctor at a hospital in Indore. Looking for a family who will treat the home as their own.",
+    "landlord": {
+      "name": "Dr. Kavita Rathore",
+      "verified": true,
+      "tenancies_completed": 1,
+      "full_refunds": 1,
+      "disputes_lost": 0
+    }
+  }
+]

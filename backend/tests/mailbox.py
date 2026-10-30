@@ -1,0 +1,1 @@
+OUTBOX: dict[str, str] = {}

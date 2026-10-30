@@ -1,0 +1,56 @@
+type Tenancy @entity {
+  id: ID! # Vault contract address
+  landlord: Bytes!
+  tenant: Bytes!
+  depositToken: Bytes!
+  depositAmount: BigInt!
+  deductionCap: BigInt!
+  claimWindow: BigInt!
+  leaseHash: Bytes!
+  state: String! # Drafted, Signed, Active, MoveOut, Disputed, Refunded
+  landlordSigned: Boolean!
+  tenantSigned: Boolean!
+  depositLocked: Boolean!
+  claimedAmount: BigInt
+  claimDeadline: BigInt
+  assignedArbitrator: Bytes
+  createdAt: BigInt!
+  updatedAt: BigInt!
+  evidences: [Evidence!]! @derivedFrom(field: "tenancy")
+  stateTransitions: [StateTransition!]! @derivedFrom(field: "tenancy")
+}
+
+type Evidence @entity {
+  id: ID! # manifestHash
+  tenancy: Tenancy!
+  evidenceType: Int! # 0 = MoveIn, 1 = MoveOut, 2 = ClaimSupport
+  manifestHash: Bytes!
+  submittedBy: Bytes!
+  timestamp: BigInt!
+}
+
+type StateTransition @entity {
+  id: ID! # txHash-logIndex
+  tenancy: Tenancy!
+  fromState: String!
+  toState: String!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Claim @entity {
+  id: ID!
+  tenancy: Tenancy!
+  amount: BigInt!
+  evidenceRef: String!
+  timestamp: BigInt!
+}
+
+type Decision @entity {
+  id: ID!
+  tenancy: Tenancy!
+  arbitrator: Bytes!
+  landlordAmount: BigInt!
+  tenantRefundAmount: BigInt!
+  timestamp: BigInt!
+}

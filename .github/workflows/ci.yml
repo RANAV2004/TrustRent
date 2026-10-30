@@ -1,0 +1,91 @@
+name: TrustRent CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  contracts:
+    name: Smart Contracts Quality Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: contracts/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Compile Contracts & Generate Types
+        run: npm run compile
+
+      - name: Run Test Suite & Time-Travel Checks
+        run: npm run test
+
+      - name: Contract Coverage Report (Target >= 90%)
+        run: npm run coverage
+
+  backend:
+    name: FastAPI Backend Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install ruff pytest-cov
+
+      - name: Lint with Ruff
+        run: ruff check backend/
+
+      - name: Run Pytest with Coverage Gate (Target >= 70%)
+        run: pytest --cov=app --cov-report=term backend/tests
+
+  frontend:
+    name: Next.js Frontend Quality Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+

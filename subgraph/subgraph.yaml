@@ -1,0 +1,64 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: TenancyFactory
+    network: polygon-amoy
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: TenancyFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Tenancy
+      abis:
+        - name: TenancyFactory
+          file: ../contracts/artifacts/contracts/TenancyFactory.sol/TenancyFactory.json
+        - name: DepositVault
+          file: ../contracts/artifacts/contracts/DepositVault.sol/DepositVault.json
+      eventHandlers:
+        - event: TenancyCreated(indexed address,indexed address,indexed address,address,uint256,uint256,uint256,bytes32)
+          handler: handleTenancyCreated
+      file: ./src/mapping.ts
+
+templates:
+  - kind: ethereum/contract
+    name: DepositVault
+    network: polygon-amoy
+    source:
+      abi: DepositVault
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Tenancy
+        - Evidence
+        - StateTransition
+        - Claim
+        - Decision
+      abis:
+        - name: DepositVault
+          file: ../contracts/artifacts/contracts/DepositVault.sol/DepositVault.json
+      eventHandlers:
+        - event: LeaseSigned(indexed address,uint8)
+          handler: handleLeaseSigned
+        - event: DepositLocked(indexed address,uint256)
+          handler: handleDepositLocked
+        - event: EvidenceRecorded(indexed uint8,indexed bytes32,indexed address)
+          handler: handleEvidenceRecorded
+        - event: MoveOutStarted(uint256,bytes32)
+          handler: handleMoveOutStarted
+        - event: ClaimRaised(uint256,string)
+          handler: handleClaimRaised
+        - event: ClaimAcceptedByTenant(uint256,uint256)
+          handler: handleClaimAcceptedByTenant
+        - event: DisputeDecided(indexed address,uint256,uint256)
+          handler: handleDisputeDecided
+        - event: StateChanged(indexed uint8,indexed uint8)
+          handler: handleStateChanged
+      file: ./src/mapping.ts

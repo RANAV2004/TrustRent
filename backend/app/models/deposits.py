@@ -1,0 +1,51 @@
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
+from app.core.database import Base
+from app.models.marketplace import utcnow
+class Payment(Base):  # payment
+    __tablename__ = "payments"
+    id = Column(String(36), primary_key=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    purpose = Column(String(12), nullable=False)
+    ref = Column(String(40), nullable=False)
+    amount = Column(Integer, nullable=False)
+    provider = Column(String(12), nullable=False)
+    order_id = Column(String(64), unique=True, index=True, nullable=False)
+    payment_id = Column(String(64), nullable=True)
+    status = Column(String(10), default="created")
+    created_at = Column(DateTime, default=utcnow)
+    paid_at = Column(DateTime, nullable=True)
+class Deposit(Base):  # deposit
+    __tablename__ = "deposits"
+    id = Column(String(16), primary_key=True)
+    listing_id = Column(String(16), ForeignKey("listings.id"), nullable=False, index=True)
+    tenant_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    amount = Column(Integer, nullable=False)
+    payment_id = Column(String(36), ForeignKey("payments.id"), nullable=False)
+    status = Column(String(20), default="held")
+    paid_at = Column(DateTime, default=utcnow)
+    deducted = Column(Integer, nullable=True)
+    refunded = Column(Integer, nullable=True)
+    deduction_reason = Column(Text, nullable=True)
+    proposed_by = Column(String(36), nullable=True)
+    proposed_at = Column(DateTime, nullable=True)
+    settled_at = Column(DateTime, nullable=True)
+    settled_by = Column(String(36), nullable=True)
+    refund_ref = Column(String(64), nullable=True)
+    owner_payout = Column(String(12), nullable=True)
+    record_hash = Column(String(66), nullable=True)
+    record_tx = Column(String(66), nullable=True)
+    settle_hash = Column(String(66), nullable=True)
+    settle_tx = Column(String(66), nullable=True)
+    network = Column(String(24), nullable=True)
+class LedgerEntry(Base):  # ledger block
+    __tablename__ = "ledger_entries"
+    seq = Column(Integer, primary_key=True, autoincrement=True)
+    deposit_id = Column(String(16), index=True, nullable=False)
+    kind = Column(String(12), nullable=False)
+    amounts = Column(JSON, nullable=False)
+    data_hash = Column(String(66), nullable=False)
+    prev_hash = Column(String(66), nullable=False)
+    entry_hash = Column(String(66), unique=True, index=True, nullable=False)
+    chain_tx = Column(String(66), nullable=True)
+    created_at = Column(DateTime, default=utcnow)
