@@ -13,7 +13,7 @@ def email_enabled() -> bool:
 def build_code_email(to: str, code: str, minutes: int) -> EmailMessage:
     msg = EmailMessage()
     msg["Subject"] = f"{code} is your TrustRent verification code"
-    msg["From"] = formataddr((settings.SMTP_FROM_NAME, settings.SMTP_USER))
+    msg["From"] = formataddr((settings.SMTP_FROM_NAME, settings.SMTP_FROM_EMAIL or settings.SMTP_USER))
     msg["To"] = to
     msg.set_content(
         f"Your TrustRent verification code is {code}. Enter it to finish creating your account.\n\n"

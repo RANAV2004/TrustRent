@@ -1,7 +1,7 @@
 import os
 import tempfile
 _tmp = tempfile.mkdtemp(prefix="trustrent-test-")
-os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_tmp}/test.db"
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{_tmp}/test.db"
 os.environ["STORAGE_LOCAL_DIR"] = os.path.join(_tmp, "storage")
 os.environ["MEDIA_DIR"] = os.path.join(_tmp, "media")
 os.environ["DEBUG"] = "false"
@@ -14,6 +14,7 @@ async def prepare_database():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
+    await engine.dispose()
 
 @pytest.fixture(autouse=True)
 def outbox(monkeypatch):

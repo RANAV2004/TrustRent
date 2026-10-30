@@ -23,5 +23,5 @@ class Tenancy(Base):  # tenancy
     lease_hash = Column(String(66), nullable=False)
     lease_storage_cid = Column(String(255), nullable=True)
     state = Column(Enum(TenancyStateEnum), default=TenancyStateEnum.DRAFTED)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

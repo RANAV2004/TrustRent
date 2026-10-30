@@ -18,4 +18,4 @@ class Evidence(Base):  # evidence
     manifest_hash = Column(String(66), nullable=True)
     storage_path = Column(String(500), nullable=False)
     encryption_iv = Column(String(64), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

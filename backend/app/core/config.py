@@ -34,6 +34,7 @@ class Settings(BaseSettings):  # settings
     SMTP_USER: str = ""
     SMTP_APP_PASSWORD: str = ""
     SMTP_FROM_NAME: str = "TrustRent"
+    SMTP_FROM_EMAIL: str = ""
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     S3_ENDPOINT_URL: str = ""

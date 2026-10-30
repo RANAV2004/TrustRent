@@ -8,3 +8,6 @@ __all__ = [
     "Base", "User", "UserRole", "Tenancy", "TenancyStateEnum", "Evidence", "EvidenceType",
     "Listing", "OwnerApplication", "EmailVerification", "IdentitySubmission", "Deposit", "LedgerEntry", "Payment", "Conversation", "Message",
 ]
+for _table in Base.metadata.tables.values():  # checked at commit
+    for _fk in _table.foreign_key_constraints:
+        _fk.deferrable, _fk.initially = True, "DEFERRED"

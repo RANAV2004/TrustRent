@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
     from app.core.config import ENV_FILES
     found = [str(p) for p in ENV_FILES if p.is_file()]
     print(f"TrustRent settings from: {', '.join(found) or 'no .env file found'}")
-    print(f"Sign-up email codes: {'sending from ' + settings.SMTP_USER if email_enabled() else 'NOT SET UP (add SMTP_USER and SMTP_APP_PASSWORD to .env)'}")
+    print(f"Sign-up email codes: {'sending from ' + (settings.SMTP_FROM_EMAIL or settings.SMTP_USER) if email_enabled() else 'NOT SET UP (add SMTP_USER and SMTP_APP_PASSWORD to .env)'}")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(add_missing_columns)

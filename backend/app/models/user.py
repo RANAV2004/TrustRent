@@ -15,7 +15,7 @@ class User(Base):  # user
     wallet_address = Column(String(42), unique=True, index=True, nullable=True)
     is_verified = Column(Boolean, default=False)
     attestation_hash = Column(String(66), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     first_name = Column(String(80), nullable=True)
     last_name = Column(String(80), nullable=True)
     username = Column(String(20), unique=True, index=True, nullable=True)

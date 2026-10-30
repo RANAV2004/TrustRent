@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: trustrent-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.1
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "False"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DEMO_MODE
+        value: "True"
+      - key: SEED_SAMPLE_LISTINGS
+        value: "True"
+      - key: ADMIN_EMAILS
+        value: '["admin@trustrent.in"]'
+      - key: DEMO_ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "2525"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: trustrent.otp@gmail.com
+      - key: SMTP_APP_PASSWORD
+        sync: false
+      - key: STORAGE_MASTER_KEY_HEX
+        sync: false
