@@ -2,11 +2,11 @@ import json
 import re
 import uuid
 from pathlib import Path
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
-from app.models.deposits import Deposit, Payment
-from app.models.marketplace import Conversation, Listing, Message, utcnow
+from app.models.deposits import ConditionPhoto, Deposit, Payment
+from app.models.marketplace import Conversation, IdentitySubmission, Listing, Message, OwnerApplication, utcnow
 from app.models.user import User, UserRole
 from app.services.marketplace import redate_sample
 DATA = Path(__file__).resolve().parent.parent / "data" / "listings.json"
@@ -161,3 +161,24 @@ async def seed_demo_deposits(db: AsyncSession) -> int:
         added += 1
     await db.commit()
     return added
+async def remove_sample_data(db: AsyncSession) -> int:  # sample cleanup
+    demo = list(await db.scalars(select(User.id).where(User.is_demo.is_(True))))
+    homes = list(await db.scalars(select(Listing.id).where(or_(Listing.owner_id.in_(demo), Listing.listed_days_ago.is_not(None)))))
+    if not demo and not homes:
+        return 0
+    deps = list(await db.scalars(select(Deposit.id).where(or_(Deposit.listing_id.in_(homes), Deposit.tenant_id.in_(demo),
+                                                              Deposit.owner_id.in_(demo)))))
+    pays = list(await db.scalars(select(Deposit.payment_id).where(Deposit.id.in_(deps))))
+    chats = list(await db.scalars(select(Conversation.id).where(or_(Conversation.listing_id.in_(homes),
+                                                                    Conversation.seeker_id.in_(demo), Conversation.owner_id.in_(demo)))))
+    await db.execute(delete(Message).where(or_(Message.conversation_id.in_(chats), Message.sender_id.in_(demo))))
+    await db.execute(delete(Conversation).where(Conversation.id.in_(chats)))
+    await db.execute(delete(ConditionPhoto).where(ConditionPhoto.deposit_id.in_(deps)))
+    await db.execute(delete(Deposit).where(Deposit.id.in_(deps)))
+    await db.execute(delete(Payment).where(or_(Payment.id.in_(pays), Payment.user_id.in_(demo))))
+    await db.execute(delete(Listing).where(Listing.id.in_(homes)))
+    await db.execute(delete(OwnerApplication).where(OwnerApplication.user_id.in_(demo)))
+    await db.execute(delete(IdentitySubmission).where(IdentitySubmission.user_id.in_(demo)))
+    await db.execute(delete(User).where(User.id.in_(demo)))
+    await db.commit()
+    return len(demo) + len(homes)

@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal, add_missing_columns
 from app.api.v1 import health, auth, identity, tenancies, evidence, arbitrator, faucet
 from app.api.v1 import accounts, listings, owner, messages, admin, admin_console, payments, deposits, condition
-from app.services.seed import seed_demo_admin, seed_demo_deposits, seed_sample_listings
+from app.services.seed import remove_sample_data, seed_demo_admin, seed_demo_deposits, seed_sample_listings
 import app.models  # noqa: F401
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,6 +22,10 @@ async def lifespan(app: FastAPI):
     if settings.SEED_SAMPLE_LISTINGS:
         async with AsyncSessionLocal() as db:
             await seed_sample_listings(db)
+    else:
+        async with AsyncSessionLocal() as db:
+            if await remove_sample_data(db):
+                print("Sample homes, sample users and their deposits removed")
     async with AsyncSessionLocal() as db:
         await seed_demo_admin(db)
     if settings.SEED_SAMPLE_LISTINGS:

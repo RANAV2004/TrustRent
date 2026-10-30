@@ -22,9 +22,9 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: DEMO_MODE
-        value: "True"
+        value: "False"
       - key: SEED_SAMPLE_LISTINGS
-        value: "True"
+        value: "False"
       - key: ADMIN_EMAILS
         value: '["admin@trustrent.in"]'
       - key: DEMO_ADMIN_PASSWORD

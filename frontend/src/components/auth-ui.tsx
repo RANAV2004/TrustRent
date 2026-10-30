@@ -20,7 +20,7 @@ export function AuthFrame({ title, subtitle, children }: { title: string; subtit
             <li className="flex gap-3"><Check />Message owners and book a time to see the home, all in one place.</li>
           </ul>
         </div>
-        <p className="relative text-xs text-white/60">TrustRent, final year project, SVIIT Indore</p>
+        <p className="relative text-xs text-white/60">TrustRent</p>
       </aside>
       <main className="flex flex-col items-center justify-center px-4 py-10 sm:px-8">
         <div className="mb-8 lg:hidden">

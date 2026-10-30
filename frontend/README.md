@@ -1,7 +1,6 @@
 # TrustRent frontend
 
 Web app for **TrustRent: A Blockchain-Based Security Deposit Escrow and Verified Tenancy System for the Indian Rental Market**
-(SVIIT Indore, final-year major project: Vansh Rana, Aniket Parmar, Akhil Antony, Sameer Ajay Chauhan; guide Prof. Jagrati Nagdiya).
 
 People looking for a home search verified listings, message owners and book visits. (HomePref, an AI assistant for finding homes, will be added shortly.)
 Owners verify their identity and property, then list homes with photos, a Google Maps location and tenancy terms.
