@@ -1,7 +1,6 @@
 # TrustRent
 
 > **A Blockchain-Based Security Deposit Escrow and Verified Tenancy System for the Indian Rental Market**
-> Major Project (BTCS706N), T, Shri Vaishnav Vidyapeeth Vishwavidyalaya, Indore.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg?style=flat&logo=solidity)](https://soliditylang.org/)
@@ -9,20 +8,18 @@
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000.svg?style=flat&logo=nextdotjs)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 
----
 
-## 📖 Key Documentation
+ # Key Documentation
 - **[Project Charter](PROJECT_CHARTER.md)**: Problem statement, objectives, team roles, and boundaries.
 - **[System Architecture](ARCHITECTURE.md)**: Component topology, smart contract state machine, off-chain storage & encryption.
 - **[12-Week Roadmap](ROADMAP.md)**: Sprint timeline, deliverables, and course milestones.
 - **[Product Backlog](BACKLOG.md)**: Jira-style epics, user stories, and acceptance criteria.
 - **[SRS & Academic Docs](Docs/)**: Original SRS v1.0, Project Synopsis, and course implementation plan.
 
----
 
-## 🏗 Repository Layout
 
-```text
+# Repository Layout
+
 TrustRent/
 ├── contracts/               # Hardhat, Solidity 0.8.x, OpenZeppelin contracts & tests
 │   ├── contracts/           # DepositVault, TenancyFactory, Registries, MockINR
@@ -50,21 +47,21 @@ TrustRent/
 └── .env.example             # Unified environment variables template
 ```
 
----
 
-## 🚀 Quickstart Guide
 
-### 1. Prerequisites
+# Quickstart Guide
+
+# 1. Prerequisites
 - **Node.js** v20+ · **Python** v3.12+ · **Git** · **Docker** (optional, for PostgreSQL)
 
-### 2. Configure environment
+# 2. Configure environment
 ```bash
 cp .env.example .env                       # backend (SQLite works without Docker:
                                            #   DATABASE_URL=sqlite+aiosqlite:///./trustrent.db)
 cp frontend/.env.example frontend/.env.local
 ```
 
-### 3. Backend (port 8000)
+# 3. Backend (port 8000)
 ```bash
 cd backend
 python -m venv venv
@@ -92,7 +89,7 @@ npx hardhat compile
 npx hardhat test
 ```
 
-### Demo walkthrough
+# Demo walkthrough
 See [frontend/README.md](frontend/README.md#demo-walkthrough-for-the-viva). In short:
 1. Sign up as **looking for a home** → search `Indore` or `452010` → open a home → **Request a visit**. The sample owner accepts on its own.
 2. Try a home marked **New · Premium only** → get Premium (ID check + demo payment) → contact the owner.
@@ -105,6 +102,6 @@ See [frontend/README.md](frontend/README.md#demo-walkthrough-for-the-viva). In s
 
 ---
 
-## 👥 Authors & Supervision
+#  Authors & Supervision
 - **Team**: Aniket Parmar, Akhil Antony, Sameer Ajay Chauhan, Vansh Rana
 
