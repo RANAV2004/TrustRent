@@ -62,11 +62,15 @@ async def seed_sample_listings(db: AsyncSession) -> int:
     return added
 async def seed_demo_admin(db: AsyncSession) -> None:
     from app.core.config import settings
-    from app.services.accounts import hash_secret
-    if not settings.DEMO_MODE or not settings.ADMIN_EMAILS:
+    from app.services.accounts import hash_secret, verify_secret
+    if not settings.DEMO_MODE or not settings.ADMIN_EMAILS or not settings.DEMO_ADMIN_PASSWORD:
         return
     email = settings.ADMIN_EMAILS[0].lower()
-    if await db.scalar(select(User).where(User.email == email)):
+    existing = await db.scalar(select(User).where(User.email == email))
+    if existing:
+        if not verify_secret(settings.DEMO_ADMIN_PASSWORD, existing.password_hash):  # password from .env
+            existing.password_hash = hash_secret(settings.DEMO_ADMIN_PASSWORD)
+            await db.commit()
         return
     db.add(User(id=str(uuid.uuid4()), email=email, name="TrustRent Admin", first_name="TrustRent", last_name="Admin",
                 username="admin", phone="+910000000000", country="India", provider="password",

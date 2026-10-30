@@ -27,7 +27,7 @@ class Settings(BaseSettings):  # settings
     SEED_SAMPLE_LISTINGS: bool = True
     EARLY_ACCESS_HOURS: int = 48
     ADMIN_EMAILS: List[str] = ["admin@trustrent.in"]
-    DEMO_ADMIN_PASSWORD: str = "admin12345"
+       DEMO_ADMIN_PASSWORD: str = ""
     VERIFICATION_REGISTER_PATH: str = "./registers/verification_register.xlsx"
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

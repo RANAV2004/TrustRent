@@ -5,6 +5,7 @@ os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_tmp}/test.db"
 os.environ["STORAGE_LOCAL_DIR"] = os.path.join(_tmp, "storage")
 os.environ["MEDIA_DIR"] = os.path.join(_tmp, "media")
 os.environ["DEBUG"] = "false"
+os.environ["DEMO_ADMIN_PASSWORD"] = "test-admin-password"
 import pytest  # noqa: E402
 from app.core.database import engine, Base  # noqa: E402
 import app.models  # noqa: E402,F401
