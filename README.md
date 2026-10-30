@@ -1,107 +1,332 @@
 # TrustRent
 
-> **A Blockchain-Based Security Deposit Escrow and Verified Tenancy System for the Indian Rental Market**
+A blockchain-based security deposit escrow and verified tenancy system for the Indian rental market.
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636.svg?style=flat&logo=solidity)](https://soliditylang.org/)
-[![Polygon Amoy](https://img.shields.io/badge/Polygon-Amoy%20Testnet-8247E5.svg?style=flat&logo=polygon)](https://polygon.technology/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000.svg?style=flat&logo=nextdotjs)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+# Table of Contents
 
+1. [Overview](#overview)
+2. [Screenshots](#screenshots)
+3. [Features](#features)
+4. [How Deposit Receipts Work](#how-deposit-receipts-work)
+5. [Technology Stack](#technology-stack)
+6. [Repository Structure](#repository-structure)
+7. [Getting Started](#getting-started)
+8. [Configuration](#configuration)
+9. [Demo Mode and Sample Data](#demo-mode-and-sample-data)
+10. [Running Tests](#running-tests)
+11. [Deployment](#deployment)
+12. [Documentation](#documentation)
+13. [Team](#team)
+14. [License](#license)
 
- # Key Documentation
-- **[Project Charter](PROJECT_CHARTER.md)**: Problem statement, objectives, team roles, and boundaries.
-- **[System Architecture](ARCHITECTURE.md)**: Component topology, smart contract state machine, off-chain storage & encryption.
-- **[12-Week Roadmap](ROADMAP.md)**: Sprint timeline, deliverables, and course milestones.
-- **[Product Backlog](BACKLOG.md)**: Jira-style epics, user stories, and acceptance criteria.
-- **[SRS & Academic Docs](Docs/)**: Original SRS v1.0, Project Synopsis, and course implementation plan.
+# Overview
 
+Renting a home in India usually means paying a security deposit of two to ten months of rent directly to the landlord. At move-out, deductions are often decided by one side alone, records are kept on paper or in chat messages, and tenants have little proof of what was paid or agreed.
 
+TrustRent addresses this in three ways:
 
-# Repository Layout
+- **Verified people.** Every renter and owner confirms their email at sign-up. Owners submit identity and property documents, which an admin reviews before any home goes live.
+- **Tamper-proof deposit receipts.** Each deposit and each settlement is recorded as a cryptographic fingerprint in a hash-chained ledger, and optionally on the Polygon blockchain. Anyone can later check that the amount and details have not been changed.
+- **A fair settlement process.** The owner proposes a deduction with a reason, the tenant accepts or disputes it, and disputed cases are settled by an admin. Every step is added to the receipt chain.
 
-TrustRent/
-├── contracts/               # Hardhat, Solidity 0.8.x, OpenZeppelin contracts & tests
-│   ├── contracts/           # DepositVault, TenancyFactory, Registries, MockINR
-│   ├── scripts/             # Deployment and verification scripts
-│   └── test/                # Unit tests for state machines & security invariants
-├── backend/                 # Python 3.12+ FastAPI asynchronous REST backend
-│   ├── app/
-│   │   ├── api/v1/          # auth, identity, tenancies, evidence, arbitrator, faucet (v1.0)
-│   │   │                    # accounts, listings, owner, messages (v1.1, web app)
-│   │   ├── core/            # Config, security, database engine
-│   │   ├── models/          # SQLAlchemy 2.0 ORM models
-│   │   ├── services/        # Hashing, encryption, ledger, email, seed data
-│   │   └── data/            # Sample listings (Indore: Vijay Nagar, Pipliyahana)
-│   └── tests/               # Pytest async test suite
-├── frontend/                # Next.js 16 + React 19 + TypeScript + Tailwind 4 web app
-│   └── src/
-│       ├── app/             # Pages: auth, search, listings, messages, HomePref AI (coming soon),
-│       │                    # premium, owner dashboard, deposits, admin console
-│       ├── components/      # UI components
-│       └── lib/             # API client, auth, listings, owner, messages, sync cache
-├── subgraph/                # The Graph indexer schema & mappings
-├── Docs/                    # SRS, Synopsis, plan, frozen hand-off interfaces
-│   └── hand_off/            # openapi.json, ABIs, MARKETPLACE_API.md
-├── docker-compose.yml       # Local PostgreSQL database
-└── .env.example             # Unified environment variables template
+# Screenshots
+
+Screenshots are stored in `Docs/screenshots`.
+
+# Sign in
+
+![Sign in](Docs/screenshots/sign-in.png)
+
+# Sign up with email verification
+
+![Sign up](Docs/screenshots/sign-up.png)
+
+# Search homes
+
+![Search](Docs/screenshots/search.png)
+
+# Search results
+
+![Search results](Docs/screenshots/search-results.png)
+
+# Listing details
+
+![Listing details](Docs/screenshots/listing.png)
+
+# Messages and visit booking
+
+![Messages](Docs/screenshots/messages.png)
+
+# Deposits
+
+![Deposits](Docs/screenshots/deposits.png)
+
+# Owner dashboard
+
+![Owner dashboard](Docs/screenshots/owner-dashboard.png)
+
+# Premium
+
+![Premium](Docs/screenshots/premium.png)
+
+# Admin console overview
+
+![Admin overview](Docs/screenshots/admin-overview.png)
+
+# Admin deposits and receipt chain
+
+![Admin deposits](Docs/screenshots/admin-deposits.png)
+
+# Admin users
+
+![Admin users](Docs/screenshots/admin-users.png)
+
+## Features
+
+# For people looking for a home
+
+- Sign up with email verification (a six-digit code sent by email) or sign in with Google.
+- Search homes by city, area or pin code, with filters for rent, bedrooms, furnishing, facilities and preferred tenants.
+- View listing details, photos, the deposit amount and the owner's deposit track record.
+- Message owners and book visits. The exact address is shown only after a visit is confirmed.
+- Upload an identity document to become a verified user.
+- Pay the security deposit and receive a deposit receipt.
+- Accept or dispute a settlement proposed by the owner at move-out.
+- Look up any receipt by deposit ID or receipt hash.
+
+# For owners
+
+- Apply for owner verification with an identity document and a property document.
+- Add listings with photos, rent, deposit, facilities and availability.
+- Pause, resume or delete listings.
+- Reply to messages and accept or decline visit requests.
+- Propose a deposit settlement with the deduction and the reason.
+
+# Premium
+
+- Weekly, monthly and quarterly plans.
+- Premium members can contact owners of new listings during the first 48 hours, before everyone else.
+- New listings still appear in everyone's search results, marked as Premium only until the early access period ends.
+
+# Admin console
+
+- Overview of users, listings, deposits, messages and Premium revenue.
+- Review owner and identity documents, approve or reject them, and download the verification register as an Excel file.
+- Ban, unban or delete user accounts. Deleting removes personal details and documents but keeps financial records.
+- Unlist or relist any home with a reason that the owner can see.
+- Read conversations between renters and owners for safety checks and disputes.
+- View Premium members, plans and payments, and revoke Premium.
+- View all deposits and the full receipt chain, settle disputed deposits and mark owner payouts.
+- Generate a deposit receipt for a deposit paid outside the app, for example by bank transfer, UPI or cheque.
+
+# How Deposit Receipts Work
+
+1. **Payment.** The tenant pays the deposit through the payment gateway (Razorpay), or an admin records a deposit that was paid outside the app.
+2. **Fingerprint.** The deposit details (deposit ID, home, tenant, owner, amount, time and payment reference) are hashed with Keccak-256. Only this fingerprint is recorded. Names and personal data are never written to the chain.
+3. **Linked block.** The fingerprint is stored as a new block that also contains the hash of the previous block. Changing any earlier record breaks every link after it.
+4. **On-chain copy.** When the DepositRegistry contract is configured, the receipt is also written to the Polygon Amoy network.
+5. **Verification.** The receipt lookup page recomputes the fingerprint from the stored details and compares it with the receipt. Any change shows as a mismatch.
+6. **Settlement.** At move-out, the agreed deduction and refund are recorded as a second block linked to the same deposit.
+
+# Technology Stack
+
+| Layer | Technology |
+
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Pydantic |
+| Database | SQLite for local development, PostgreSQL in production |
+| Blockchain | Solidity 0.8.24, Hardhat, OpenZeppelin, Polygon Amoy, web3.py |
+| Authentication | JWT, scrypt password hashing, email verification over SMTP, Google sign-in |
+| Payments | Razorpay (demo checkout available for development) |
+| File storage | AES-256-GCM encrypted documents on local disk or S3 compatible storage |
+| Indexing | The Graph subgraph |
+| Testing | Pytest, Hardhat with Mocha and Chai, ESLint, Ruff |
+
+# Repository Structure
+
+| Path | Contents |
+
+| `frontend/` | Next.js web application |
+| `frontend/src/app/` | Pages for sign in, sign up, search, listings, messages, deposits, premium, owner and admin |
+| `frontend/src/components/` | Shared interface components |
+| `frontend/src/lib/` | API client, authentication, listings, messages and deposits |
+| `backend/` | FastAPI service |
+| `backend/app/api/v1/` | REST endpoints |
+| `backend/app/models/` | Database models |
+| `backend/app/services/` | Ledger, chain client, email, payments, storage, seed data |
+| `backend/tests/` | Backend test suite |
+| `contracts/` | Solidity contracts, deployment scripts and tests |
+| `subgraph/` | The Graph schema and mappings |
+| `scripts/` | Evaluation and hand-off generation scripts |
+| `Docs/` | SRS, synopsis, implementation plan, go-live guide and API reference |
+
+## Getting Started
+
+# Prerequisites
+
+- Node.js 20 or later
+- Python 3.12
+- Git
+
+# 1. Clone the repository
+
+```bash
+git clone https://github.com/RANAV2004/TrustRent.git
+cd TrustRent
 ```
 
+# 2. Create the environment file
 
+Copy `.env.example` to `.env` in the project root and fill in the values you need. See [Configuration](#configuration).
 
-# Quickstart Guide
+Windows (PowerShell):
 
-# 1. Prerequisites
-- **Node.js** v20+ · **Python** v3.12+ · **Git** · **Docker** (optional, for PostgreSQL)
-
-# 2. Configure environment
-```bash
-cp .env.example .env                       # backend (SQLite works without Docker:
-                                           #   DATABASE_URL=sqlite+aiosqlite:///./trustrent.db)
-cp frontend/.env.example frontend/.env.local
+```powershell
+Copy-Item .env.example .env
 ```
 
-# 3. Backend (port 8000)
+macOS and Linux:
+
 ```bash
+cp .env.example .env
+```
+
+# 3. Start the backend
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 cd backend
-python -m venv venv
-.\venv\Scripts\activate        # Windows
-source venv/bin/activate         # Linux / Mac
 pip install -r requirements.txt
-pytest                           # 21 tests
 uvicorn app.main:app --reload --port 8000
 ```
-API docs are at http://localhost:8000/docs. On first start the backend creates the tables and loads the sample homes in Vijay Nagar and Pipliyahana, Indore.
 
-### 4. Frontend (port 3000)
+macOS and Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+The API runs at `http://localhost:8000`, and the interactive API documentation is at `http://localhost:8000/docs`. On startup the backend prints whether email verification is configured.
+
+# 4. Start the frontend
+
+In a second terminal:
+
 ```bash
 cd frontend
 npm install
-npm run dev                      # http://localhost:3000
+cp .env.example .env.local
+npm run dev
 ```
-If `NEXT_PUBLIC_API_URL` is empty, the frontend runs in **demo mode** with everything kept in the browser, which is handy when the backend isn't running.
 
-### 5. Smart contracts
+On Windows, use `Copy-Item .env.example .env.local` instead of `cp`.
+
+Open `http://localhost:3000` in a browser.
+
+# 5. Deploy the contracts (optional)
+
+The application works without a blockchain connection by using the built-in hash-chained ledger. To also write receipts to Polygon Amoy:
+
 ```bash
 cd contracts
 npm install
-npx hardhat compile
+npx hardhat run scripts/deploy-deposit-registry.ts --network amoy
+```
+
+Then set `DEPOSIT_REGISTRY_ADDRESS` and `CHAIN_SIGNER_PRIVATE_KEY` in `.env`.
+
+## Configuration
+
+The backend reads `.env` from the project root or from the `backend` folder. The most important settings are listed below. The full list is in `.env.example`.
+
+| Setting | Purpose |
+|---|---|
+| `DATABASE_URL` | SQLite by default. Paste a hosted PostgreSQL URL for production. |
+| `JWT_SECRET` | Secret used to sign login tokens. Use a long random value in production. |
+| `DEMO_MODE` | Enables demo checkout, automatic ID approval and the demo admin account. Set to `False` in production. |
+| `SEED_SAMPLE_LISTINGS` | Loads the sample Indore homes, tenants and deposit receipts. |
+| `ADMIN_EMAILS` | Accounts with these emails can open the admin console. |
+| `SMTP_USER`, `SMTP_APP_PASSWORD` | Gmail address and app password used to send sign-up verification codes. Sign-up is paused without them. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Live payments. Without them, payments use the demo checkout in demo mode. |
+| `STORAGE_PROVIDER` | `local` or `s3` for encrypted document storage. |
+| `DEPOSIT_REGISTRY_ADDRESS`, `CHAIN_SIGNER_PRIVATE_KEY` | Write deposit receipts to the Polygon contract. |
+
+The frontend reads `frontend/.env.local`. Set `NEXT_PUBLIC_API_URL` to `http://localhost:8000/api/v1`.
+
+Never commit `.env` or `.env.local`. Both are listed in `.gitignore`.
+
+# Demo Mode and Sample Data
+
+With `DEMO_MODE=True` and `SEED_SAMPLE_LISTINGS=True`, the backend creates:
+
+- Six sample homes in Vijay Nagar and Pipliyahana, Indore.
+- Sample owners who reply automatically to messages.
+- Three sample tenants, two of them with Premium.
+- Three deposit receipts: one held, one with a settlement proposed and one settled.
+- A demo admin account with the username `admin` and the password `admin12345`.
+
+Turn both settings off before going live.
+
+## Running Tests
+
+Backend:
+
+```bash
+cd backend
+pytest
+```
+
+Smart contracts:
+
+```bash
+cd contracts
 npx hardhat test
 ```
 
-# Demo walkthrough
-See [frontend/README.md](frontend/README.md#demo-walkthrough-for-the-viva). In short:
-1. Sign up as **looking for a home** → search `Indore` or `452010` → open a home → **Request a visit**. The sample owner accepts on its own.
-2. Try a home marked **New · Premium only** → get Premium (ID check + demo payment) → contact the owner.
-3. Sign up as **renting out my home** → verify (ID + property document) → approve on the demo review desk → **Add listing** with photos and a map pin.
-4. Sign in as the seeker again, request a visit to the new home → as the owner, accept it in **Messages**.
-5. Pay the **deposit** on a home after your visit is confirmed: you get a receipt (deposit ID + hash). At move-out the owner proposes any deduction in **Deposits**, the tenant accepts or disputes, and anyone can check a receipt on **Look up deposit**.
-6. Sign in as the demo admin (**admin** / **admin12345**): a separate **admin console** with Overview, Users (ban, unban, delete), Listings (unlist, relist), Messages (read-only), Deposits & receipts (three sample receipts and the linked receipt chain), Premium (members, payments, revoke) and Verifications (documents, approve/reject, **Download Excel register**).
+Frontend checks:
 
-> **Demo mode is on** (`DEMO_MODE=True`): demo checkout, self-approval for owners, auto-approved IDs, demo admin. Real verification emails (Gmail), Razorpay payments, hosted PostgreSQL and S3/R2 storage switch on when their keys are set; see **[Docs/GO_LIVE.md](Docs/GO_LIVE.md)**, then set `DEMO_MODE=False`.
+```bash
+cd frontend
+npm run lint
+npx tsc --noEmit
+npm run build
+```
 
----
+## Deployment
 
-#  Authors & Supervision
-- **Team**: Aniket Parmar, Akhil Antony, Sameer Ajay Chauhan, Vansh Rana
+Step-by-step instructions for hosted PostgreSQL, encrypted file storage, Razorpay, Gmail SMTP, contract deployment, admin accounts and hosting are in [Docs/GO_LIVE.md](Docs/GO_LIVE.md).
 
+## Documentation
+
+| Document | Description |
+|---|---|
+| [Project Charter](PROJECT_CHARTER.md) | Problem statement, objectives, scope and team roles |
+| [Architecture](ARCHITECTURE.md) | System components and contract design |
+| [Roadmap](ROADMAP.md) | Timeline and milestones |
+| [Backlog](BACKLOG.md) | Epics and user stories |
+| [Software Requirements Specification](Docs/TrustRent_SRS.md) | Functional and non-functional requirements |
+| [Synopsis](Docs/Synopsis.md) | Project synopsis |
+| [Go-Live Guide](Docs/GO_LIVE.md) | Production setup |
+| [Marketplace API](Docs/hand_off/MARKETPLACE_API.md) | Web application endpoints |
+| [OpenAPI Specification](Docs/hand_off/openapi.json) | Full API schema |
+
+## Team
+
+| Name | Role |
+|---|---|
+| Aniket Parmar | Team member |
+| Akhil Antony | Team member |
+| Sameer Ajay Chauhan | Team member |
+| Vansh Rana | Team member |
+
+
+## License
+
+This project is released under the MIT License. See [LICENSE](LICENSE) for details.
