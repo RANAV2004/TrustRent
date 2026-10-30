@@ -270,9 +270,8 @@ With `DEMO_MODE=True` and `SEED_SAMPLE_LISTINGS=True`, the backend creates:
 - Sample owners who reply automatically to messages.
 - Three sample tenants, two of them with Premium.
 - Three deposit receipts: one held, one with a settlement proposed and one settled.
-- A demo admin account with the username `admin` and the password `admin12345`.
-
-Turn both settings off before going live.
+- An admin account with the username `admin`. Its password is the `DEMO_ADMIN_PASSWORD` value in your `.env` file.
+  Turn both settings off before going live.
 
 ## Running Tests
 
