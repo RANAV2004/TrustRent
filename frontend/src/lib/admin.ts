@@ -71,7 +71,7 @@ export const getConversationMessages = (id: string) => api<AdminMessage[]>(`/adm
 export const getPremium = () => api<AdminPremium>("/admin/premium");
 export const revokePremium = (id: string) => api<{ user: AdminUser }>(`/admin/premium/${id}/revoke`, { method: "POST" });
 export interface LedgerBlock {
-  seq: number; depositId: string; kind: "deposit" | "settlement"; amounts: Record<string, number>;
+  seq: number; depositId: string; kind: "deposit" | "settlement" | "photo"; amounts: Record<string, number>;
   dataHash: string; prevHash: string; hash: string; chainTx: string | null; at: string;
 }
 export const getLedger = () => api<{ intact: boolean; genesis: string; network: string; blocks: LedgerBlock[] }>("/admin/ledger");

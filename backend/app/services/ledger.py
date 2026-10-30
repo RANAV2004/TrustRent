@@ -1,7 +1,7 @@
 import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.deposits import Deposit, LedgerEntry
+from app.models.deposits import ConditionPhoto, Deposit, LedgerEntry
 from app.models.marketplace import utcnow
 from app.services import chain
 from app.services.accounts import iso
@@ -39,6 +39,13 @@ async def record_settlement(db: AsyncSession, d: Deposit) -> None:
     tx = await chain.settle_deposit(d.id, d.deducted, d.refunded, d.settle_hash)
     entry.chain_tx = tx
     d.settle_tx = tx or entry.entry_hash
+def photo_details(p: ConditionPhoto) -> dict:
+    return {"photoId": p.id, "depositId": p.deposit_id, "side": p.side, "stage": p.stage, "room": p.room,
+            "fileHash": p.file_hash, "uploadedAt": iso(p.created_at)}
+async def record_photo(db: AsyncSession, p: ConditionPhoto) -> None:  # photo block
+    p.record_hash = fingerprint(photo_details(p))
+    entry = await _append(db, p.deposit_id, "photo", p.record_hash, {})
+    p.record_tx = entry.entry_hash
 async def ledger_state(db: AsyncSession) -> tuple[list[LedgerEntry], bool]:
     entries = list(await db.scalars(select(LedgerEntry).order_by(LedgerEntry.seq)))
     prev = GENESIS

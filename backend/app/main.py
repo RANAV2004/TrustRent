@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal, add_missing_columns
 from app.api.v1 import health, auth, identity, tenancies, evidence, arbitrator, faucet
-from app.api.v1 import accounts, listings, owner, messages, admin, admin_console, payments, deposits
+from app.api.v1 import accounts, listings, owner, messages, admin, admin_console, payments, deposits, condition
 from app.services.seed import seed_demo_admin, seed_demo_deposits, seed_sample_listings
 import app.models  # noqa: F401
 @asynccontextmanager
@@ -57,6 +57,7 @@ app.include_router(admin.router, prefix="/api/v1")
 app.include_router(admin_console.router, prefix="/api/v1")
 app.include_router(payments.router, prefix="/api/v1")
 app.include_router(deposits.router, prefix="/api/v1")
+app.include_router(condition.router, prefix="/api/v1")
 Path(settings.MEDIA_DIR).mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory=settings.MEDIA_DIR), name="media")
 @app.get("/")

@@ -49,3 +49,18 @@ class LedgerEntry(Base):  # ledger block
     entry_hash = Column(String(66), unique=True, index=True, nullable=False)
     chain_tx = Column(String(66), nullable=True)
     created_at = Column(DateTime, default=utcnow)
+class ConditionPhoto(Base):  # room photo
+    __tablename__ = "condition_photos"
+    id = Column(String(36), primary_key=True)
+    deposit_id = Column(String(16), ForeignKey("deposits.id"), nullable=False, index=True)
+    uploader_id = Column(String(36), ForeignKey("users.id"), nullable=False)
+    side = Column(String(8), nullable=False)
+    stage = Column(String(10), nullable=False)
+    room = Column(String(40), nullable=False)
+    note = Column(String(200), nullable=True)
+    file_path = Column(String(500), nullable=False)
+    file_iv = Column(String(64), nullable=False)
+    file_hash = Column(String(66), nullable=False)
+    record_hash = Column(String(66), nullable=False)
+    record_tx = Column(String(66), nullable=True)
+    created_at = Column(DateTime, default=utcnow)

@@ -110,11 +110,11 @@ function Chain({ blocks, genesis, intact, network }: { blocks: LedgerBlock[]; ge
             <span className="absolute top-6 -left-1.75 h-3 w-3 rounded-full bg-vault" />
             <div className="flex flex-col gap-1 rounded-xl border border-line p-3 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="font-medium">Block #{b.seq}, {b.kind === "deposit" ? "Deposit recorded" : "Settlement recorded"}, {b.depositId}</span>
+                <span className="font-medium">Block #{b.seq}, {b.kind === "deposit" ? "Deposit recorded" : b.kind === "photo" ? "Room photo recorded" : "Settlement recorded"}, {b.depositId}</span>
                 <span className="text-muted">{when(b.at, true)}</span>
               </div>
               <span className="text-muted">
-                {b.kind === "deposit" ? `Amount ${formatINR(b.amounts.amount ?? 0)}` : `Deducted ${formatINR(b.amounts.deducted ?? 0)}, refunded ${formatINR(b.amounts.refunded ?? 0)}`}
+                {b.kind === "deposit" ? `Amount ${formatINR(b.amounts.amount ?? 0)}` : b.kind === "photo" ? "Photo fingerprint, no amount" : `Deducted ${formatINR(b.amounts.deducted ?? 0)}, refunded ${formatINR(b.amounts.refunded ?? 0)}`}
               </span>
               <span className="grid gap-x-3 gap-y-0.5 sm:grid-cols-[110px_minmax(0,1fr)]">
                 <span className="text-muted">Previous block</span><code className="break-all">{b.prevHash}</code>

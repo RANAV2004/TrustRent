@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { ConditionPhotos } from "@/components/condition-photos";
 import { Deposit, networkLabel, proposeSettlement, respondToSettlement, STATUS_LABEL } from "@/lib/deposits";
 import { formatINR } from "@/lib/format";
 const date = (iso: string | null) =>
@@ -95,6 +96,7 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
         <p className="text-xs text-muted">Keep the deposit ID or receipt hash. Anyone with an account can check it on <Link href={`/deposits/lookup?q=${d.id}`} className="text-vault hover:underline">Look up deposit</Link>.</p>
       </div>
       <VerifiedBadge d={d} />
+      {d.role && <ConditionPhotos depositId={d.id} />}
       {d.role === "owner" && (d.status === "held" || d.status === "settlement_proposed") && (
         <form onSubmit={propose} className="flex flex-col gap-3 rounded-xl bg-mist p-4">
           <p className="text-sm font-medium">{d.status === "held" ? "Tenant moved out? Propose the settlement" : "Change your proposal"}</p>
