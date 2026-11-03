@@ -99,7 +99,11 @@ async def verify_payment(body: VerifyIn, user: User = Depends(get_current_user),
         else:
             pay.payment_id = f"demo_pay_{uuid.uuid4().hex[:12]}"
         pay.status, pay.paid_at = "paid", utcnow()
-        await _fulfil(db, pay, user)
+        problem = await _fulfil(db, pay, user)
+        if problem:  # money taken but no deposit created: flag it for refund
+            pay.status = "refund_due" if pay.provider == "razorpay" else "cancelled"
+            await db.commit()
+            raise field_error(problem, None, status.HTTP_409_CONFLICT)
         await db.commit()
     await db.refresh(user)
     out = {"user": user_out(user), "payment": {"id": pay.id, "status": pay.status, "purpose": pay.purpose}}
@@ -107,15 +111,22 @@ async def verify_payment(body: VerifyIn, user: User = Depends(get_current_user),
         dep = await db.scalar(select(Deposit).where(Deposit.payment_id == pay.id))
         out["depositId"] = dep.id if dep else None
     return out
-async def _fulfil(db: AsyncSession, pay: Payment, user: User) -> None:
+async def _fulfil(db: AsyncSession, pay: Payment, user: User) -> str | None:
     if pay.purpose == "premium":
         days = PLANS[pay.ref][0]
         start = user.premium_until if has_premium(user) else utcnow()
         user.premium_plan, user.premium_until = pay.ref, start + timedelta(days=days)
-        return
+        return None
     listing = await db.get(Listing, pay.ref)
+    if not listing:
+        return "This home is no longer listed, so no deposit was taken. Any amount charged will be refunded."
+    open_dep = await db.scalar(select(Deposit.id).where(Deposit.listing_id == listing.id, Deposit.tenant_id == user.id,
+                                                       Deposit.status != "settled"))
+    if open_dep:  # second order paid for the same home
+        return f"You already have an active deposit for this home ({open_dep}). This payment will be refunded."
     dep = Deposit(id=f"DEP-{uuid.uuid4().hex[:8].upper()}", listing_id=listing.id, tenant_id=user.id,
                   owner_id=listing.owner_id, amount=pay.amount, payment_id=pay.id, status="held", paid_at=pay.paid_at)
     db.add(dep)
     await db.flush()
     await record_deposit(db, dep)
+    return None

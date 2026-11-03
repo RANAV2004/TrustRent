@@ -14,7 +14,7 @@ async def test_full_api_workflow():
             "email": landlord_email,
             "name": "Landlord Test",
             "role": "landlord",
-            "smart_account_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+            "smart_account_address": "0x" + uuid.uuid4().hex + "f39fd6e5"
         })
         assert res.status_code == 200
         landlord_token = res.json()["access_token"]
@@ -24,7 +24,7 @@ async def test_full_api_workflow():
             "email": tenant_email,
             "name": "Tenant Test",
             "role": "tenant",
-            "smart_account_address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+            "smart_account_address": "0x" + uuid.uuid4().hex + "70997970"
         })
         assert res.status_code == 200
         tenant_token = res.json()["access_token"]
@@ -40,7 +40,7 @@ async def test_full_api_workflow():
         })
         assert res.status_code == 200
         attestation = res.json()
-        assert attestation["verified"] is True
+        assert attestation["verified"] is False  # only an admin review verifies
         assert attestation["attestation_hash"].startswith("0x")
         dummy_pdf = io.BytesIO(b"%PDF-1.4 LEASE AGREEMENT TEST")
         res = await ac.post(

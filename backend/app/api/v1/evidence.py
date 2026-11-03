@@ -3,12 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, R
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.models.tenancy import Tenancy
 from app.models.evidence import Evidence, EvidenceType
 from app.services.hash_service import HashService
 from app.services.files import private_storage, read_private
 from app.api.v1.auth import get_current_user
+from app.services.accounts import is_reviewer
 router = APIRouter(prefix="/evidence", tags=["Condition Evidence"])
 @router.post("/upload")  # evidence
 async def upload_evidence(
@@ -52,51 +53,48 @@ async def upload_evidence(
         "manifest_hash": manifest_hash,
         "message": "Evidence securely encrypted and stored. Anchoring hash ready for on-chain submission."
     }
+SAFE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf", "video/mp4"}
+async def _evidence_for(db: AsyncSession, evidence_id: str, user: User) -> Evidence:
+    evidence = await db.get(Evidence, evidence_id)
+    if not evidence:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+    tenancy = await db.get(Tenancy, evidence.tenancy_id)
+    is_party = tenancy is not None and user.id in (tenancy.landlord_id, tenancy.tenant_id)
+    if not (is_party or is_reviewer(user)):
+        raise HTTPException(status_code=403, detail="Unauthorized access to confidential evidence")
+    return evidence
+def _read(evidence: Evidence) -> bytes:
+    try:
+        return read_private(evidence.storage_path, evidence.encryption_iv)
+    except FileNotFoundError:
+        raise HTTPException(status_code=410, detail="This evidence file is no longer stored on the server") from None
 @router.get("/{evidence_id}/verify")  # evidence
 async def verify_evidence(
     evidence_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Evidence).where(Evidence.id == evidence_id)
-    res = await db.execute(stmt)
-    evidence = res.scalar_one_or_none()
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence not found")
-    try:
-        decrypted_bytes = read_private(evidence.storage_path, evidence.encryption_iv)
-        recomputed_hash = HashService.hash_bytes(decrypted_bytes)
-        matches = (recomputed_hash == evidence.file_hash)
-        return {
-            "evidence_id": evidence.id,
-            "recorded_hash": evidence.file_hash,
-            "computed_hash": recomputed_hash,
-            "matches": matches,
-            "status": "VALID_TAMPER_FREE" if matches else "HASH_MISMATCH_TAMPERED"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Evidence verification failed: {str(e)}")
+    evidence = await _evidence_for(db, evidence_id, current_user)
+    recomputed_hash = HashService.hash_bytes(_read(evidence))
+    matches = recomputed_hash == evidence.file_hash
+    return {
+        "evidence_id": evidence.id,
+        "recorded_hash": evidence.file_hash,
+        "computed_hash": recomputed_hash,
+        "matches": matches,
+        "status": "VALID_TAMPER_FREE" if matches else "HASH_MISMATCH_TAMPERED"
+    }
 @router.get("/{evidence_id}/download")  # evidence
 async def download_evidence(
     evidence_id: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Evidence).where(Evidence.id == evidence_id)
-    res = await db.execute(stmt)
-    evidence = res.scalar_one_or_none()
-    if not evidence:
-        raise HTTPException(status_code=404, detail="Evidence not found")
-    stmt_tenancy = select(Tenancy).where(Tenancy.id == evidence.tenancy_id)
-    res_tenancy = await db.execute(stmt_tenancy)
-    tenancy = res_tenancy.scalar_one_or_none()
-    is_party = tenancy and (current_user.id in [tenancy.landlord_id, tenancy.tenant_id])
-    is_arbitrator = (current_user.role == UserRole.ARBITRATOR)
-    if not (is_party or is_arbitrator):
-        raise HTTPException(status_code=403, detail="Unauthorized access to confidential evidence")
-    decrypted_bytes = read_private(evidence.storage_path, evidence.encryption_iv)
+    evidence = await _evidence_for(db, evidence_id, current_user)
+    name = "".join(c for c in evidence.file_name if c.isalnum() or c in "._- ")[:100] or "evidence_file"
+    media = evidence.mime_type if evidence.mime_type in SAFE_TYPES else "application/octet-stream"
     return Response(
-        content=decrypted_bytes,
-        media_type=evidence.mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{evidence.file_name}"'}
+        content=_read(evidence),
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{name}"', "X-Content-Type-Options": "nosniff"}
     )

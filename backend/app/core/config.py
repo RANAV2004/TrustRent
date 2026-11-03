@@ -6,9 +6,9 @@ _BACKEND_DIR = Path(__file__).resolve().parents[2]
 ENV_FILES = (_BACKEND_DIR.parent / ".env", _BACKEND_DIR / ".env", Path(".env"))
 class Settings(BaseSettings):  # settings
     ENVIRONMENT: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
-    JWT_SECRET: str = "super-secret-jwt-key-change-in-production-min-32-chars"
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     DATABASE_URL: str = "sqlite+aiosqlite:///./trustrent.db"
@@ -52,4 +52,10 @@ class Settings(BaseSettings):  # settings
         env_file_encoding="utf-8",
         extra="ignore"
     )
+UNSAFE_JWT_SECRETS = {"", "super-secret-jwt-key-change-in-production-min-32-chars", "change-me", "change-this-to-a-long-random-secret-min-32-chars"}
 settings = Settings()
+if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:  # never sign with a known key
+    import logging
+    import secrets
+    logging.getLogger(__name__).warning("JWT_SECRET is missing or weak; using a random key. Sign-ins reset on restart. Set JWT_SECRET in .env.")
+    settings.JWT_SECRET = secrets.token_urlsafe(48)

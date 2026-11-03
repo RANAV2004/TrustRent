@@ -25,8 +25,14 @@ async def draft_tenancy(
 ):
     if current_user.role != UserRole.LANDLORD:
         raise HTTPException(status_code=403, detail="Only landlords can draft tenancies")
+    if monthly_rent <= 0 or deposit_amount <= 0:
+        raise HTTPException(status_code=400, detail="Rent and deposit must be greater than zero")
+    if deduction_cap <= 0:
+        raise HTTPException(status_code=400, detail="Deduction cap must be greater than zero")
     if deduction_cap > deposit_amount:
         raise HTTPException(status_code=400, detail="Deduction cap cannot exceed deposit amount")
+    if not 3 <= claim_window_days <= 30:
+        raise HTTPException(status_code=400, detail="Claim window must be between 3 and 30 days")
     stmt = select(User).where(User.email == tenant_email)
     res = await db.execute(stmt)
     tenant = res.scalar_one_or_none()

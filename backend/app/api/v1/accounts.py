@@ -72,6 +72,8 @@ async def validate_profile(p: ProfileIn, db: AsyncSession, me: User | None = Non
     if not p.country.strip():
         raise field_error("Choose your country.", "country")
     me_id = me.id if me else ""
+    if email in {e.lower() for e in settings.ADMIN_EMAILS} and (me is None or (me.email or "").lower() != email):
+        raise field_error("An account with this email already exists. Sign in instead.", "email", status.HTTP_409_CONFLICT)
     for column, value, field, msg in (
         (User.username, p.username, "username", "That username is taken."),
         (User.email, email, "email", "An account with this email already exists. Sign in instead."),
@@ -168,6 +170,10 @@ async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
         except ValidationError:
             raise field_error("Enter a valid Google email.", "email") from None
         first, last = "", ""
+        existing = await db.scalar(select(User).where(func.lower(User.email) == email))
+        reserved = email in {e.lower() for e in settings.ADMIN_EMAILS}
+        if reserved or (existing and (existing.provider != "google" or existing.password_hash)):  # demo shortcut can't take over accounts
+            raise field_error("Sign in with your password for this account.", "email", status.HTTP_403_FORBIDDEN)
     else:
         raise field_error("Google sign-in is not configured on this server.", None, status.HTTP_501_NOT_IMPLEMENTED)
     user = await db.scalar(select(User).where(func.lower(User.email) == email))

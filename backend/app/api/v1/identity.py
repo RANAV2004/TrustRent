@@ -17,12 +17,11 @@ async def verify_identity(
         raise HTTPException(status_code=400, detail="Invalid government identification format")
     attestation_payload = f"{current_user.id}:{request.id_type}:{request.id_number}:{time.time()}"
     attestation_hash = HashService.hash_text(attestation_payload)
-    current_user.is_verified = True
     current_user.attestation_hash = attestation_hash
     await db.commit()
     return VerificationResult(
-        verified=True,
+        verified=bool(current_user.is_verified),
         attestation_hash=attestation_hash,
         transaction_hash=None,
-        message="Identity verification succeeded. Attestation hash generated for on-chain registry."
+        message="Attestation recorded. An admin must review your ID document before your account is verified."
     )

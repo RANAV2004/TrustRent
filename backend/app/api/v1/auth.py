@@ -4,7 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import create_access_token, decode_access_token
-from app.models.user import User
+from app.core.config import settings
+from app.models.user import User, UserRole
+from app.services.accounts import is_admin
 from app.schemas.user import UserLoginRequest, TokenResponse, UserResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -22,15 +24,25 @@ async def get_current_user(
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     if user.banned_at or user.deleted_at:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been suspended. Contact TrustRent support.")
     return user
 @router.post("/login", response_model=TokenResponse)  # wallet login
 async def login_or_register(request: UserLoginRequest, db: AsyncSession = Depends(get_db)):
+    if not settings.DEMO_MODE:  # demo wallet login only
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    if is_admin(User(email=request.email)) or request.role == UserRole.ARBITRATOR:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the normal sign-in for this account")
     stmt = select(User).where(User.email == request.email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
+    if user and (user.password_hash or user.provider in ("google", "password") or user.role == UserRole.ARBITRATOR):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the normal sign-in for this account")
+    if request.smart_account_address:  # one wallet per account (unique column)
+        owner = await db.scalar(select(User.id).where(User.wallet_address == request.smart_account_address))
+        if owner and (not user or owner != user.id):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This wallet is linked to another account")
     if not user:
         user = User(
             id=str(uuid.uuid4()),
