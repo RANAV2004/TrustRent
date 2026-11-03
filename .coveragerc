@@ -1,0 +1,3 @@
+[run]
+# SQLAlchemy async runs endpoint code inside greenlets; without this, lines after awaits are reported as missed.
+concurrency = greenlet,thread

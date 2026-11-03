@@ -56,8 +56,8 @@ jobs:
       - name: Lint with Ruff
         run: ruff check backend/
 
-      - name: Run Pytest with Coverage Gate (Target >= 70%)
-        run: pytest --cov=app --cov-report=term backend/tests
+      - name: Run Pytest with Coverage Gate (>= 85%)
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85 backend/tests
 
   frontend:
     name: Next.js Frontend Quality Gate
