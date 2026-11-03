@@ -270,8 +270,9 @@ With `DEMO_MODE=True` and `SEED_SAMPLE_LISTINGS=True`, the backend creates:
 - Sample owners who reply automatically to messages.
 - Three sample tenants, two of them with Premium.
 - Three deposit receipts: one held, one with a settlement proposed and one settled.
-- An admin account with the username `admin`. Its password is the `DEMO_ADMIN_PASSWORD` value in your `.env` file.
   Turn both settings off before going live.
+
+In every mode, including production, the backend also creates an admin account with the username `admin` and the first address in `ADMIN_EMAILS`, using `DEMO_ADMIN_PASSWORD` from your `.env` file as its password. Creating it at startup means nobody else can register or claim the admin email. Use a long, random password, and keep it out of git.
 
 ## Running Tests
 

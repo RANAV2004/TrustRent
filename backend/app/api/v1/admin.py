@@ -9,7 +9,7 @@ from app.api.v1.owner import application_out
 from app.core.database import get_db
 from app.models.marketplace import IdentitySubmission, OwnerApplication, utcnow
 from app.models.user import User
-from app.services.accounts import display_name, iso, is_reviewer
+from app.services.accounts import display_name, iso, is_admin, is_reviewer
 from app.services.files import read_private
 from app.services.register import rebuild_register, try_rebuild_register
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -18,6 +18,10 @@ class DecisionIn(BaseModel):
     note: str | None = None
 def require_admin(user: User = Depends(get_current_user)) -> User:
     if not is_reviewer(user):
+        raise HTTPException(status_code=403, detail="Admins only")
+    return user
+def require_full_admin(user: User = Depends(require_admin)) -> User:
+    if not is_admin(user):
         raise HTTPException(status_code=403, detail="Admins only")
     return user
 def _person(u: User | None) -> dict:
@@ -39,14 +43,21 @@ async def verifications(admin: User = Depends(require_admin), db: AsyncSession =
         "owners": [{**application_out(a), "applicant": _person(users.get(a.user_id))} for a in owners],
         "identities": [{**identity_out(s), "applicant": _person(users.get(s.user_id))} for s in ids],
     }
+SAFE_INLINE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"}
 def _file_response(content: bytes, name: str) -> Response:
+    # Uploads are user-controlled: only show known-safe types inline, download everything else,
+    # and stop the browser from sniffing or running anything (an "id.html" must never execute).
     media = mimetypes.guess_type(name)[0] or "application/octet-stream"
-    return Response(content=content, media_type=media, headers={
-        "Content-Disposition": f'inline; filename="{name}"',
+    inline = media in SAFE_INLINE_TYPES
+    safe_name = "".join(c for c in name if c.isalnum() or c in "._- ")[:100] or "document"
+    return Response(content=content, media_type=media if inline else "application/octet-stream", headers={
+        "Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{safe_name}"',
         "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox",
     })
 @router.get("/owner-applications/{user_id}/{doc}")  # owner docs
-async def owner_document(user_id: str, doc: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def owner_document(user_id: str, doc: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     app = await db.get(OwnerApplication, user_id)
     if not app or doc not in ("id", "property"):
         raise HTTPException(status_code=404, detail="Not found")
@@ -54,13 +65,13 @@ async def owner_document(user_id: str, doc: str, admin: User = Depends(require_a
                       else (app.property_file_path, app.property_file_iv, app.property_file_name))
     return _file_response(read_private(path, iv), name)
 @router.get("/identity/{submission_id}/file")  # id doc
-async def identity_document(submission_id: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def identity_document(submission_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
     return _file_response(read_private(s.file_path, s.file_iv), s.file_name)
 @router.post("/identity/{submission_id}/review")  # id review
-async def review_identity(submission_id: str, body: DecisionIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def review_identity(submission_id: str, body: DecisionIn, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
     if not s:
         raise HTTPException(status_code=404, detail="Not found")

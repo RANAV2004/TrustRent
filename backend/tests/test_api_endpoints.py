@@ -40,7 +40,7 @@ async def test_full_api_workflow():
         })
         assert res.status_code == 200
         attestation = res.json()
-        assert attestation["verified"] is True
+        assert attestation["verified"] is False  # only an admin's document review verifies an account
         assert attestation["attestation_hash"].startswith("0x")
         dummy_pdf = io.BytesIO(b"%PDF-1.4 LEASE AGREEMENT TEST")
         res = await ac.post(

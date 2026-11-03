@@ -63,7 +63,8 @@ async def seed_sample_listings(db: AsyncSession) -> int:
 async def seed_demo_admin(db: AsyncSession) -> None:
     from app.core.config import settings
     from app.services.accounts import hash_secret, verify_secret
-    if not settings.DEMO_MODE or not settings.ADMIN_EMAILS or not settings.DEMO_ADMIN_PASSWORD:
+    # Runs in every mode: owning the admin email up front means nobody else can register or claim it.
+    if not settings.ADMIN_EMAILS or not settings.DEMO_ADMIN_PASSWORD:
         return
     email = settings.ADMIN_EMAILS[0].lower()
     existing = await db.scalar(select(User).where(User.email == email))

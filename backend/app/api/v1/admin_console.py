@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.accounts import PLANS, field_error
-from app.api.v1.admin import require_admin
+from app.api.v1.admin import require_admin, require_full_admin
 from app.core.database import get_db
 from app.models.deposits import Deposit, Payment
 from app.models.marketplace import (
@@ -20,10 +20,6 @@ router = APIRouter(prefix="/admin", tags=["Admin console"])
 PLAN_LABEL = {"week": "1 week", "month": "1 month", "quarter": "3 months"}
 class ReasonIn(BaseModel):
     reason: str = Field(default="", max_length=300)
-def require_full_admin(user: User = Depends(require_admin)) -> User:
-    if not is_admin(user):
-        raise HTTPException(status_code=403, detail="Admins only")
-    return user
 async def _target(db: AsyncSession, user_id: str, admin: User) -> User:
     u = await db.get(User, user_id)
     if not u or u.deleted_at:

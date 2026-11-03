@@ -14,7 +14,7 @@ from app.models.marketplace import EmailVerification, IdentitySubmission, utcnow
 from app.models.deposits import Payment
 from app.models.user import User
 from app.services.accounts import (
-    USERNAME_RE, has_premium, hash_secret, normalise_phone, role_for, user_out,
+    USERNAME_RE, has_premium, hash_secret, is_admin_email, normalise_phone, role_for, user_out,
     verify_secret,
 )
 from app.services.hash_service import HashService
@@ -168,6 +168,8 @@ async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
         except ValidationError:
             raise field_error("Enter a valid Google email.", "email") from None
         first, last = "", ""
+        if is_admin_email(email):  # demo shortcut proves nothing about the inbox
+            raise field_error("Sign in to the admin account with its password.", "email", status.HTTP_403_FORBIDDEN)
     else:
         raise field_error("Google sign-in is not configured on this server.", None, status.HTTP_501_NOT_IMPLEMENTED)
     user = await db.scalar(select(User).where(func.lower(User.email) == email))
@@ -188,6 +190,9 @@ async def me(user: User = Depends(get_current_user)):
 @router.put("/users/me")  # edit profile
 async def update_me(body: ProfileIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     email, phone = await validate_profile(body, db, me=user)
+    if email != (user.email or "").lower() and is_admin_email(email):
+        # Admin rights follow the email address, so it can't be claimed by editing a profile.
+        raise field_error("That email address can't be used.", "email", status.HTTP_403_FORBIDDEN)
     apply_profile(user, body, email, phone)
     await db.commit()
     await db.refresh(user)

@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.marketplace import OwnerApplication, utcnow
 from app.models.user import User
-from app.services.accounts import iso, is_reviewer
+from app.services.accounts import iso, is_admin
 from app.services.hash_service import HashService
 from app.services.files import private_storage
 from app.services.register import try_rebuild_register
@@ -91,7 +91,7 @@ async def submit_application(
 @router.post("/owner/application/{user_id}/review")  # owner review
 async def review_application(user_id: str, body: ReviewIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     self_demo = settings.DEMO_MODE and user.id == user_id
-    if not (is_reviewer(user) or self_demo):
+    if not (is_admin(user) or self_demo):  # only a TrustRent admin approves owners
         raise HTTPException(status_code=403, detail="Admins only")
     app = await db.get(OwnerApplication, user_id)
     if not app:

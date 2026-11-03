@@ -22,6 +22,15 @@ async def legacy_login(client, role: str) -> tuple[dict, dict]:
     res = await client.post("/api/v1/auth/login", json={"email": f"{role}_{tag()}@example.com", "name": role.title(), "role": role})
     assert res.status_code == 200, res.text
     return res.json()["user"], bearer(res.json()["access_token"])
+async def make_arbitrator() -> tuple[User, dict]:
+    """Arbitrators can't sign themselves up, so tests create them directly."""
+    from app.models.user import UserRole
+    u = User(id=str(uuid.uuid4()), email=f"arb_{tag()}@example.com", name="Arbitrator", role=UserRole.ARBITRATOR,
+             provider="password", is_verified=True)
+    async with AsyncSessionLocal() as db:
+        db.add(u)
+        await db.commit()
+    return u, bearer(create_access_token(u.id))
 async def verify_id(client, headers):
     res = await client.post("/api/v1/users/me/identity", headers=headers, data={"docType": "PAN card"},
                             files={"file": ("pan.jpg", io.BytesIO(b"pan"), "image/jpeg")})
@@ -78,7 +87,7 @@ async def test_email_code_expiry_and_attempt_limit(client):
 async def test_account_type_identity_and_premium_rules(client):
     _, h = await signup(client)
     assert (await client.put("/api/v1/users/me/account-type", headers=h, json={"accountType": "boss"})).status_code == 400
-    _, ah = await legacy_login(client, "arbitrator")
+    _, ah = await make_arbitrator()
     assert (await client.put("/api/v1/users/me/account-type", headers=ah, json={"accountType": "owner"})).status_code == 403
     bad_doc = await client.post("/api/v1/users/me/identity", headers=h, data={"docType": "Library card"},
                                 files={"file": ("x.jpg", io.BytesIO(b"x"), "image/jpeg")})
@@ -107,7 +116,7 @@ async def test_tenancy_evidence_and_arbitrator_rules(client):
     landlord, lh = await legacy_login(client, "landlord")
     tenant, th = await legacy_login(client, "tenant")
     _, xh = await legacy_login(client, "tenant")
-    arbitrator, arh = await legacy_login(client, "arbitrator")
+    arbitrator, arh = await make_arbitrator()
     form = {"property_address": "Flat 1, Indore", "monthly_rent": "10000", "deposit_amount": "20000",
             "deduction_cap": "5000", "claim_window_days": "7", "tenant_email": tenant["email"]}
     lease = {"lease_file": ("lease.pdf", io.BytesIO(b"%PDF lease"), "application/pdf")}
@@ -342,7 +351,7 @@ async def test_offline_deposit_rules(client):
 async def test_admin_console_guards_and_delete_owner(client):
     ah = await admin_headers(client)
     me = (await client.get("/api/v1/users/me", headers=ah)).json()["user"]
-    _, arh = await legacy_login(client, "arbitrator")
+    _, arh = await make_arbitrator()
     owner, oh, listing = await owner_with_listing(client)
     assert (await client.get("/api/v1/admin/users", headers=arh)).status_code == 200
     assert (await client.post(f"/api/v1/admin/users/{owner['id']}/ban", headers=arh, json={})).status_code == 403

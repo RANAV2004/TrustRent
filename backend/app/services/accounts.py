@@ -31,8 +31,10 @@ def display_name(user: User) -> str:
     if user.first_name:
         return f"{user.first_name} {user.last_name or ''}".strip()
     return user.name
+def is_admin_email(email: str | None) -> bool:
+    return (email or "").lower() in {e.lower() for e in settings.ADMIN_EMAILS}
 def is_admin(user: User) -> bool:
-    return (user.email or "").lower() in {e.lower() for e in settings.ADMIN_EMAILS}
+    return is_admin_email(user.email)
 def is_reviewer(user: User) -> bool:
     return is_admin(user) or user.role == UserRole.ARBITRATOR
 def has_premium(user: User) -> bool:

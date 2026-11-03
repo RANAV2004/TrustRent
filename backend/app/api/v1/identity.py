@@ -13,16 +13,19 @@ async def verify_identity(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # Records an attestation hash only. Accounts become verified when an admin approves the
+    # ID document uploaded at POST /users/me/identity, never from details the user typed in.
     if len(request.id_number.strip()) < 8:
         raise HTTPException(status_code=400, detail="Invalid government identification format")
     attestation_payload = f"{current_user.id}:{request.id_type}:{request.id_number}:{time.time()}"
     attestation_hash = HashService.hash_text(attestation_payload)
-    current_user.is_verified = True
     current_user.attestation_hash = attestation_hash
     await db.commit()
+    verified = bool(current_user.is_verified)
     return VerificationResult(
-        verified=True,
+        verified=verified,
         attestation_hash=attestation_hash,
         transaction_hash=None,
-        message="Identity verification succeeded. Attestation hash generated for on-chain registry."
+        message="Identity already verified." if verified else
+                "Attestation recorded. Upload your ID document; an admin must approve it before your account is verified."
     )
