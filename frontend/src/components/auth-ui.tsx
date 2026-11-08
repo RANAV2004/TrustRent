@@ -5,7 +5,7 @@ import { AccountType, authMode, COUNTRIES } from "@/lib/auth";
 import { Logo } from "./app-shell";
 export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) { // auth frame
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <div className="grid min-h-dvh content-start lg:content-normal lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-vault-deep p-10 text-white lg:flex">
         <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: "url(/auth-bg.jpg)" }} />
         <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-vault-deep via-vault-deep/80 to-vault-deep/55" />
@@ -22,10 +22,22 @@ export function AuthFrame({ title, subtitle, children }: { title: string; subtit
         </div>
         <p className="relative text-xs text-white/60">TrustRent</p>
       </aside>
-      <main className="flex flex-col items-center justify-center px-4 py-10 sm:px-8">
-        <div className="mb-8 lg:hidden">
+      <section className="relative overflow-hidden rounded-b-3xl bg-vault-deep px-5 pt-6 pb-8 text-white sm:px-8 lg:hidden">
+        <div aria-hidden="true" className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: "url(/auth-bg.jpg)" }} />
+        <div aria-hidden="true" className="absolute inset-0 bg-linear-to-t from-vault-deep via-vault-deep/80 to-vault-deep/55" />
+        <div className="relative [--logo-rent:#5cc4a6] [--vault:#2f9e82] [&_a]:text-white">
           <Logo />
         </div>
+        <div className="relative mt-8 flex max-w-md flex-col gap-4">
+          <h2 className="text-[26px] leading-tight text-white">Rent a home without worrying about your deposit.</h2>
+          <ul className="flex flex-col gap-2.5 text-sm text-white/85">
+            <li className="flex gap-2.5"><Check />Every landlord is identity-verified before you see their home.</li>
+            <li className="flex gap-2.5"><Check />Your deposit sits in a vault, not in the landlord&apos;s account.</li>
+            <li className="flex gap-2.5"><Check />Message owners and book a time to see the home, all in one place.</li>
+          </ul>
+        </div>
+      </section>
+      <main className="flex flex-col items-center px-5 pt-8 pb-10 sm:px-8 lg:justify-center lg:py-10">
         <div className="w-full max-w-md">
           <h1 className="text-3xl">{title}</h1>
           {subtitle && <p className="mt-2 text-muted">{subtitle}</p>}
