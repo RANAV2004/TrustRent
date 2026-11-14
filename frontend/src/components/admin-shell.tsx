@@ -35,14 +35,16 @@ export function AdminShell({ children }: { children: ReactNode }) { // admin she
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const inside = pathname.startsWith("/admin") || ALLOWED_OUTSIDE.some((p) => pathname.startsWith(p));
+  const staffHome = user?.isAdmin ? "/admin" : "/admin/deposits"; // arbitrators only see deposits and disputes
+  const inside = (user?.isAdmin ? pathname.startsWith("/admin") : pathname.startsWith("/admin/deposits")) ||
+    ALLOWED_OUTSIDE.some((p) => pathname.startsWith(p));
   useEffect(() => {
-    if (!inside) router.replace("/admin");
-  }, [inside, router]);
+    if (!inside) router.replace(staffHome);
+  }, [inside, router, staffHome]);
   const active = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
   const nav = (
     <nav className="flex flex-col gap-1" aria-label="Admin">
-      {NAV.map((n) => (
+      {NAV.filter((n) => user?.isAdmin || n.href === "/admin/deposits").map((n) => (
         <Link key={n.href} href={n.href} onClick={() => setOpen(false)} aria-current={active(n.href) ? "page" : undefined}
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${active(n.href) ? "bg-white/15 font-medium text-white" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
           <Icon d={n.icon} />
@@ -56,7 +58,7 @@ export function AdminShell({ children }: { children: ReactNode }) { // admin she
       <aside className="hidden flex-col gap-6 bg-vault-deep px-4 py-6 text-white lg:sticky lg:top-0 lg:flex lg:h-dvh">
         <div className="px-3">
           <p className="flex items-center gap-2 [--logo-rent:#5cc4a6]"><Mark /><Wordmark /></p>
-          <p className="text-xs tracking-wide text-white/60 uppercase">Admin console</p>
+          <p className="text-xs tracking-wide text-white/60 uppercase">{user?.isAdmin ? "Admin console" : "Arbitrator console"}</p>
         </div>
         {nav}
         <div className="mt-auto flex flex-col gap-2 border-t border-white/15 px-3 pt-4 text-sm">

@@ -11,8 +11,11 @@ def hash_secret(secret: str) -> str:
     salt = os.urandom(16)
     digest = hashlib.scrypt(secret.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
     return f"scrypt${salt.hex()}${digest.hex()}"
+DUMMY_HASH = hash_secret("not-a-real-password")  # login timing is the same with or without an account
+
+
 def verify_secret(secret: str, stored: str | None) -> bool:
-    if not stored or not stored.startswith("scrypt$"):
+    if not stored or not stored.startswith("scrypt$") or stored.count("$") != 2:
         return False
     _, salt_hex, digest_hex = stored.split("$")
     digest = hashlib.scrypt(secret.encode(), salt=bytes.fromhex(salt_hex), n=2**14, r=8, p=1, dklen=32)
@@ -35,6 +38,10 @@ def is_admin(user: User) -> bool:
     return (user.email or "").lower() in {e.lower() for e in settings.ADMIN_EMAILS}
 def is_reviewer(user: User) -> bool:
     return is_admin(user) or user.role == UserRole.ARBITRATOR
+
+
+def is_staff(user: User) -> bool:  # needs two-step sign-in
+    return is_reviewer(user)
 def has_premium(user: User) -> bool:
     return bool(user.premium_until and user.premium_until > utcnow())
 def user_out(user: User) -> dict:
@@ -57,6 +64,9 @@ def user_out(user: User) -> dict:
         "role": user.role.value if user.role else "tenant",
         "idVerified": bool(user.is_verified),
         "isAdmin": is_admin(user),
+        "isArbitrator": user.role == UserRole.ARBITRATOR,
+        "mfaEnabled": bool(user.totp_enabled),
+        "emailNotifications": user.email_notifications is not False,
         "premium": {"planId": user.premium_plan, "until": iso(user.premium_until)} if has_premium(user) else None,
         "createdAt": iso(user.created_at) or "",
     }

@@ -20,8 +20,20 @@ class Settings(BaseSettings):  # settings
     TENANCY_FACTORY_ADDRESS: str = Field(default="")
     STORAGE_PROVIDER: str = "local"
     STORAGE_LOCAL_DIR: str = "./local_storage"
-    STORAGE_MASTER_KEY_HEX: str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    DEMO_MODE: bool = True
+    STORAGE_MASTER_KEY_HEX: str = ""
+    DEMO_MODE: bool = False  # never on in production: demo logins, auto-approval and free payments
+    ENABLE_LEGACY_API: bool = False  # old wallet/tenancy/evidence endpoints
+    RATE_LIMIT_ENABLED: bool = True
+    MAX_REQUEST_MB: int = 50
+    FRONTEND_URL: str = "http://localhost:3000"
+    REQUIRE_STAFF_MFA: bool = True
+    RAZORPAY_WEBHOOK_SECRET: str = ""
+    SETTLEMENT_RESPONSE_DAYS: int = 7  # tenant silent this long: proposal auto-accepted
+    MOVE_OUT_CLAIM_DAYS: int = 14  # owner silent this long after move-out: full refund
+    JOB_INTERVAL_SECONDS: int = 600
+    RUN_BACKGROUND_JOBS: bool = True
+    SENTRY_DSN: str = ""
+    LOG_JSON: bool = False
     GOOGLE_CLIENT_ID: str = ""
     MEDIA_DIR: str = "./media"
     SEED_SAMPLE_LISTINGS: bool = True
@@ -53,9 +65,46 @@ class Settings(BaseSettings):  # settings
         extra="ignore"
     )
 UNSAFE_JWT_SECRETS = {"", "super-secret-jwt-key-change-in-production-min-32-chars", "change-me", "change-this-to-a-long-random-secret-min-32-chars"}
+UNSAFE_STORAGE_KEYS = {"", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+DEV_STORAGE_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 settings = Settings()
-if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:  # never sign with a known key
-    import logging
-    import secrets
-    logging.getLogger(__name__).warning("JWT_SECRET is missing or weak; using a random key. Sign-ins reset on restart. Set JWT_SECRET in .env.")
-    settings.JWT_SECRET = secrets.token_urlsafe(48)
+
+
+def is_production() -> bool:
+    return settings.ENVIRONMENT.strip().lower() in ("production", "prod")
+
+
+def _valid_key(hex_key: str) -> bool:
+    try:
+        return len(bytes.fromhex(hex_key)) == 32
+    except ValueError:
+        return False
+
+
+def check_settings() -> list[str]:  # problems that must stop a production start
+    problems = []
+    if settings.DEMO_MODE:
+        problems.append("DEMO_MODE is on (anyone could sign in as any Google user and payments are fake)")
+    if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:
+        problems.append("JWT_SECRET is missing or weak (use 32+ random characters)")
+    if settings.STORAGE_MASTER_KEY_HEX in UNSAFE_STORAGE_KEYS or not _valid_key(settings.STORAGE_MASTER_KEY_HEX):
+        problems.append("STORAGE_MASTER_KEY_HEX is missing, the public sample key, or not 64 hex characters")
+    if settings.ENABLE_LEGACY_API:
+        problems.append("ENABLE_LEGACY_API is on")
+    return problems
+
+
+import logging  # noqa: E402
+import secrets  # noqa: E402
+_log = logging.getLogger(__name__)
+if is_production():
+    _problems = check_settings()
+    if _problems:
+        raise RuntimeError("Refusing to start in production: " + "; ".join(_problems))
+else:
+    if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:
+        _log.warning("JWT_SECRET is missing or weak; using a random key. Sign-ins reset on restart. Set JWT_SECRET in .env.")
+        settings.JWT_SECRET = secrets.token_urlsafe(48)
+    if settings.STORAGE_MASTER_KEY_HEX in UNSAFE_STORAGE_KEYS or not _valid_key(settings.STORAGE_MASTER_KEY_HEX):
+        _log.warning("STORAGE_MASTER_KEY_HEX is not set; using the public development key. Never do this with real documents.")
+        settings.STORAGE_MASTER_KEY_HEX = DEV_STORAGE_KEY

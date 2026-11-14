@@ -29,7 +29,7 @@ function SetupProfile() {
           email: user.email, phone: user.phone ? user.phone.replace(/^(\+\d{1,3})(\d+)$/, "$1 $2") : "+91 ",
           country: user.country || "India",
         }}
-        lockEmail={viaGoogle}
+        lockEmail={!!user.email}
         submitLabel="Save and continue"
         busyLabel="Saving..."
         onSubmit={async (values) => {

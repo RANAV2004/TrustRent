@@ -83,5 +83,4 @@ async def test_full_api_workflow():
         res = await ac.post("/api/v1/faucet/", headers=tenant_headers, json={
             "recipient_address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
         })
-        assert res.status_code == 200
-        assert res.json()["success"] is True
+        assert res.status_code == 404  # the fake faucet was removed

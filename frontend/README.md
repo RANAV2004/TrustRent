@@ -18,7 +18,7 @@ npm run dev            # http://localhost:3000
 Requires Node 20 or later. There are two modes:
 
 - **API mode** (`NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1` in `.env.local`): accounts, listings, owner verification, messages and Premium go to the FastAPI backend in `../backend`. Start it first (see the root README).
-- **Demo mode** (`NEXT_PUBLIC_API_URL` empty): everything is kept in the browser's localStorage, so the UI works with no server at all.
+- **Demo mode** (`NEXT_PUBLIC_API_URL` empty, `npm run dev`): everything is kept in the browser's localStorage, so the UI works with no server at all. A production build (`npm run build`) never falls back to this silently: set `NEXT_PUBLIC_BROWSER_DEMO=true` if you really want a browser-only demo deployment.
 
 `NEXT_PUBLIC_*` values are built into the bundle, so restart `npm run dev` (or rebuild) after changing them.
 

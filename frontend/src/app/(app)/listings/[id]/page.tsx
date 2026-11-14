@@ -162,6 +162,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             </div>
             <p className={`mt-1 text-sm ${trust.tone === "good" ? "text-vault" : trust.tone === "warn" ? "text-amber" : "text-muted"}`}>{trust.text}</p>
             {l.landlord.disputes_lost > 0 && <p className="text-sm text-amber">Lost {l.landlord.disputes_lost} deposit dispute{l.landlord.disputes_lost > 1 ? "s" : ""} on TrustRent</p>}
+            {l.landlord.computed && l.landlord.tenancies_completed > 0 && l.landlord.avg_deduction_pct != null && (
+              <p className="text-sm text-muted">Keeps {l.landlord.avg_deduction_pct}% of the deposit on average, across {l.landlord.tenancies_completed} settled TrustRent deposit{l.landlord.tenancies_completed > 1 ? "s" : ""}.</p>
+            )}
             {l.about_owner && <p className="mt-3 text-[15px] whitespace-pre-line">{l.about_owner}</p>}
           </section>
         </div>

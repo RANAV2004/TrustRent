@@ -35,6 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) { // app shell
         { href: "/owner/listings/new", label: "Add listing", active: pathname.startsWith("/owner/listings") },
         { href: "/messages", label: "Messages", active: pathname.startsWith("/messages"), count: unread },
         { href: "/deposits", label: "Deposits", active: pathname.startsWith("/deposits") },
+        { href: "/account", label: "Account", active: pathname.startsWith("/account") },
       ]
     : [
         { href: "/search", label: "Search homes", active: pathname.startsWith("/search") || pathname.startsWith("/listings") },
@@ -42,13 +43,14 @@ export function AppShell({ children }: { children: ReactNode }) { // app shell
         { href: "/messages", label: "Messages", active: pathname.startsWith("/messages"), count: unread },
         { href: "/deposits", label: "Deposits", active: pathname.startsWith("/deposits") },
         { href: "/premium", label: "Premium", active: pathname.startsWith("/premium") },
+        { href: "/account", label: "Account", active: pathname.startsWith("/account") },
       ];
   async function switchType() {
     if (!user) return;
     const u = await setAccountType(owner ? "seeker" : "owner");
     router.push(homeFor(u));
   }
-  if (user?.isAdmin) return <AdminShell>{children}</AdminShell>;
+  if (user?.isAdmin || user?.isArbitrator) return <AdminShell>{children}</AdminShell>;
   const initials = user ? `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase() : "";
   return (
     <div className="flex min-h-dvh flex-col">
@@ -108,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) { // app shell
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">{children}</main>
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-6 text-xs text-muted sm:px-6">
-        <span>© {new Date().getFullYear()} TrustRent · {apiMode ? "Deposits are receipted on a tamper-proof ledger." : "Demo mode: data stays in this browser."}</span>
+        <span>© {new Date().getFullYear()} TrustRent · {apiMode ? "Deposits are receipted on a tamper-evident ledger." : "Demo mode: data stays in this browser."}</span>
         <nav className="flex gap-4" aria-label="Legal">
           <Link href="/privacy" className="hover:text-ink hover:underline">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-ink hover:underline">Terms of Use</Link>

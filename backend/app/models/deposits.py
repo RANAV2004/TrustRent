@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from app.core.database import Base
 from app.models.marketplace import utcnow
 class Payment(Base):  # payment
@@ -38,8 +38,13 @@ class Deposit(Base):  # deposit
     settle_hash = Column(String(66), nullable=True)
     settle_tx = Column(String(66), nullable=True)
     network = Column(String(24), nullable=True)
+    moved_out_at = Column(DateTime, nullable=True)
+    moved_out_by = Column(String(36), nullable=True)
+    proposed_deducted = Column(Integer, nullable=True)  # owner's ask, kept when a dispute is decided
+    disputed_at = Column(DateTime, nullable=True)
 class LedgerEntry(Base):  # ledger block
     __tablename__ = "ledger_entries"
+    __table_args__ = (Index("ux_ledger_prev_hash", "prev_hash", unique=True),)  # one child per block: no forks
     seq = Column(Integer, primary_key=True, autoincrement=True)
     deposit_id = Column(String(16), index=True, nullable=False)
     kind = Column(String(12), nullable=False)

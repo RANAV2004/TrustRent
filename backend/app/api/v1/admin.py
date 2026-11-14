@@ -9,7 +9,8 @@ from app.api.v1.owner import application_out
 from app.core.database import get_db
 from app.models.marketplace import IdentitySubmission, OwnerApplication, utcnow
 from app.models.user import User
-from app.services.accounts import display_name, iso, is_admin
+from app.services.accounts import display_name, iso, is_admin, is_reviewer
+from app.services.notify import notify
 from app.services.files import read_private
 from app.services.register import rebuild_register, try_rebuild_register
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -20,9 +21,12 @@ def require_admin(user: User = Depends(get_current_user)) -> User:  # admin cons
     if not is_admin(user):
         raise HTTPException(status_code=403, detail="Admins only")
     return user
-def require_full_admin(user: User = Depends(require_admin)) -> User:  # documents and approvals: admins only, not arbitrators
-    if not is_admin(user):
-        raise HTTPException(status_code=403, detail="Admins only")
+require_full_admin = require_admin  # documents, users and approvals: ADMIN_EMAILS only
+
+
+def require_reviewer(user: User = Depends(get_current_user)) -> User:  # deposits and disputes: admins and arbitrators
+    if not is_reviewer(user):
+        raise HTTPException(status_code=403, detail="Admins and arbitrators only")
     return user
 SAFE_INLINE = {"image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"}
 def _person(u: User | None) -> dict:
@@ -87,6 +91,9 @@ async def review_identity(submission_id: str, body: DecisionIn, admin: User = De
             user.is_verified = other is not None
     await db.commit()
     await try_rebuild_register(db)
+    notify(user, "ID " + ("verified" if body.approve else "needs another look"),
+           ["Your ID is verified. You can now pay deposits and buy Premium."] if body.approve
+           else [f"We couldn't verify your ID: {s.review_note}", "Upload a clearer photo on the Premium page."], "/premium")
     return {"submission": identity_out(s)}
 @router.get("/verification-register.xlsx")  # excel register
 async def download_register(admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):

@@ -15,6 +15,7 @@ from app.services.accounts import account_type, display_name, has_premium, is_ad
 from app.services.ledger import GENESIS, ledger_state
 from app.services.marketplace import message_out
 from app.services import chain
+from app.services.notify import notify
 from app.services.register import try_rebuild_register
 router = APIRouter(prefix="/admin", tags=["Admin console"])
 PLAN_LABEL = {"week": "1 week", "month": "1 month", "quarter": "3 months"}
@@ -63,7 +64,7 @@ async def overview(admin: User = Depends(require_admin), db: AsyncSession = Depe
             "deleted": sum(1 for u in users if u.deleted_at),
             "premium": sum(1 for u in live if has_premium(u)),
         },
-        "listings": {"live": listings.get("live", 0), "paused": listings.get("paused", 0),
+        "listings": {"live": listings.get("live", 0), "paused": listings.get("paused", 0), "review": listings.get("review", 0),
                      "unlisted": listings.get("blocked", 0), "removed": listings.get("removed", 0)},
         "deposits": {
             "count": len(deposits),
@@ -88,6 +89,7 @@ async def users(admin: User = Depends(require_admin), db: AsyncSession = Depends
 async def ban(user_id: str, body: ReasonIn, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     u.banned_at, u.ban_reason = utcnow(), body.reason.strip() or "Broke the TrustRent terms of use"
+    u.token_version = (u.token_version or 0) + 1
     await db.commit()
     return {"user": user_row(u)}
 @router.post("/users/{user_id}/unban")  # unban user
@@ -129,6 +131,8 @@ async def delete_user(user_id: str, admin: User = Depends(require_full_admin), d
     u.premium_plan = u.premium_until = None
     u.is_verified, u.provider = False, "deleted"
     u.deleted_at, u.banned_at, u.ban_reason = now, now, "Account deleted by admin"
+    u.token_version = (u.token_version or 0) + 1
+    u.totp_secret, u.totp_enabled = None, False
     await db.commit()
     await try_rebuild_register(db)
     return {"ok": True}
@@ -160,8 +164,13 @@ async def unlist(listing_id: str, body: ReasonIn, admin: User = Depends(require_
 @router.post("/listings/{listing_id}/relist")  # relist home
 async def relist(listing_id: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     x = await _listing(db, listing_id)
+    was_review = x.status == "review"
     x.status, x.admin_note = "live", None
+    if was_review:
+        x.listed_at = utcnow()  # goes live now: early access and search alerts start from here
     await db.commit()
+    notify(await db.get(User, x.owner_id), f"{x.title} is live", ["TrustRent approved your home. Seekers can find it now."],
+           f"/listings/{x.id}")
     return listing_row(x, await db.get(User, x.owner_id), 0)
 @router.get("/conversations")  # admin chats
 async def conversations(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
@@ -170,9 +179,14 @@ async def conversations(admin: User = Depends(require_admin), db: AsyncSession =
     people = {u.id: u for u in await db.scalars(select(User).where(User.id.in_(ids)))}
     homes = {x.id: x for x in await db.scalars(select(Listing).where(Listing.id.in_({c.listing_id for c in convs})))}
     counts = await _counts(db, Message.conversation_id)
+    newest = select(Message.conversation_id, func.max(Message.created_at).label("at")).group_by(Message.conversation_id).subquery()
+    lasts: dict[str, Message] = {}
+    for m in await db.scalars(select(Message).join(newest, (Message.conversation_id == newest.c.conversation_id)
+                                                   & (Message.created_at == newest.c.at))):
+        lasts.setdefault(m.conversation_id, m)
     out = []
     for c in convs:
-        last = await db.scalar(select(Message).where(Message.conversation_id == c.id).order_by(Message.created_at.desc()).limit(1))
+        last = lasts.get(c.id)
         home = homes.get(c.listing_id)
         out.append({
             "id": c.id, "listing": {"id": c.listing_id, "title": home.title if home else ""},

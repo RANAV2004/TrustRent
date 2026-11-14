@@ -1,8 +1,6 @@
-import io
 import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
-from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.accounts import field_error
@@ -12,7 +10,9 @@ from app.models.deposits import ConditionPhoto, Deposit, LedgerEntry
 from app.models.user import User
 from app.services.accounts import display_name, iso, is_reviewer
 from app.services.files import private_storage, read_private
+from app.core.ratelimit import enforce
 from app.services.hash_service import HashService
+from app.services.images import clean_image, read_limited
 from app.services.ledger import fingerprint, photo_details, record_photo
 router = APIRouter(tags=["Condition photos"])
 ROOMS = ["Hall / living room", "Bedroom 1", "Bedroom 2", "Bedroom 3", "Kitchen", "Bathroom 1", "Bathroom 2",
@@ -21,7 +21,6 @@ STAGES = ("move_in", "move_out")
 OPEN_FOR = {"move_in": ("held",), "move_out": ("held", "settlement_proposed", "disputed")}
 MAX_BYTES = 10 * 1024 * 1024
 MAX_PER_STAGE = 30
-MAX_SIDE = 2000
 async def _deposit_for(db: AsyncSession, deposit_id: str, user: User) -> Deposit:
     d = await db.get(Deposit, deposit_id.strip().upper())
     if not d or (user.id not in (d.tenant_id, d.owner_id) and not is_reviewer(user)):
@@ -29,18 +28,6 @@ async def _deposit_for(db: AsyncSession, deposit_id: str, user: User) -> Deposit
     return d
 def _side(d: Deposit, user: User) -> str | None:
     return "tenant" if user.id == d.tenant_id else "owner" if user.id == d.owner_id else None
-def clean_image(raw: bytes) -> bytes:  # strip location
-    try:
-        img = Image.open(io.BytesIO(raw))
-        img = ImageOps.exif_transpose(img)
-    except (UnidentifiedImageError, OSError):
-        raise field_error("That file isn't a photo we can read. Use JPG, PNG or WebP.", "file") from None
-    if img.mode != "RGB":
-        img = img.convert("RGB")
-    img.thumbnail((MAX_SIDE, MAX_SIDE))
-    out = io.BytesIO()
-    img.save(out, format="JPEG", quality=85, optimize=True)
-    return out.getvalue()
 def photo_out(p: ConditionPhoto, names: dict[str, str], ledger: dict[str, str]) -> dict:
     recorded = ledger.get(p.record_tx or "")
     return {
@@ -96,11 +83,10 @@ async def upload_photo(
         ConditionPhoto.deposit_id == d.id, ConditionPhoto.side == side, ConditionPhoto.stage == stage))
     if count >= MAX_PER_STAGE:
         raise field_error(f"You can add up to {MAX_PER_STAGE} photos for each stage.", "file", status.HTTP_409_CONFLICT)
-    raw = await file.read()
+    enforce(f"photo:user:{user.id}", 60, 3600, "Too many photos in an hour. Try again later.")
+    raw = await read_limited(file, MAX_BYTES, "file", "The photo")
     if not raw:
         raise field_error("Choose a photo to upload.", "file")
-    if len(raw) > MAX_BYTES:
-        raise field_error("The photo is larger than 10 MB.", "file")
     content = clean_image(raw)
     pid = str(uuid.uuid4())
     path, iv = private_storage().store(f"condition_{d.id}_{pid[:8]}", content)

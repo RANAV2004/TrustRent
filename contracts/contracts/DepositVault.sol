@@ -16,7 +16,8 @@ contract DepositVault is ReentrancyGuard { // deposit vault
         Active,
         MoveOut,
         Disputed,
-        Refunded
+        Refunded,
+        Cancelled
     }
 
     struct EvidenceItem {
@@ -67,6 +68,7 @@ contract DepositVault is ReentrancyGuard { // deposit vault
     event DisputeDecided(address indexed arbitrator, uint256 landlordAmount, uint256 tenantRefundAmount);
     event TenancyRefunded(uint256 tenantAmount, uint256 landlordAmount);
     event StateChanged(State indexed fromState, State indexed toState);
+    event TenancyCancelled(address indexed by);
 
     error AlreadyInitialized();
     error Unauthorized();
@@ -79,6 +81,7 @@ contract DepositVault is ReentrancyGuard { // deposit vault
     error NotApprovedArbitrator();
     error ArbitratorInactivityTimeoutNotPassed();
     error LeaseTermsImmutable();
+    error ArbitratorAlreadyAssigned(address arbitrator);
 
     modifier onlyLandlord() {
         if (msg.sender != landlord) revert Unauthorized();
@@ -249,17 +252,31 @@ contract DepositVault is ReentrancyGuard { // deposit vault
         }
     }
 
+    /// Only the platform admin assigns, and only once. A party can't swap in a friendly arbitrator or keep
+    /// re-assigning to stall until the inactivity refund. Re-assignment is allowed only if the current
+    /// arbitrator has been removed from the registry.
     function assignArbitrator(address arbitrator) external inState(State.Disputed) {
-        if (msg.sender != admin && msg.sender != landlord && msg.sender != tenant) {
-            revert Unauthorized();
+        if (msg.sender != admin) revert Unauthorized();
+        if (assignedArbitrator != address(0) && arbitratorRegistry.isApproved(assignedArbitrator)) {
+            revert ArbitratorAlreadyAssigned(assignedArbitrator);
         }
         if (!arbitratorRegistry.isApproved(arbitrator)) revert NotApprovedArbitrator();
+        if (arbitrator == landlord || arbitrator == tenant) revert Unauthorized();
         assignedArbitrator = arbitrator;
         emit ArbitratorAssigned(arbitrator);
     }
 
+    /// Either party can walk away before any money is locked.
+    function cancel() external onlyParties {
+        if (depositLocked || (state != State.Drafted && state != State.Signed)) revert InvalidState(State.Drafted, state);
+        State from = state;
+        state = State.Cancelled;
+        emit TenancyCancelled(msg.sender);
+        emit StateChanged(from, State.Cancelled);
+    }
+
     function decide(uint256 landlordAmount, uint256 tenantAmount) external inState(State.Disputed) nonReentrant {
-        if (msg.sender != assignedArbitrator) revert Unauthorized();
+        if (msg.sender != assignedArbitrator || !arbitratorRegistry.isApproved(msg.sender)) revert Unauthorized();
         if (landlordAmount + tenantAmount != depositAmount) revert InvalidSettlementSplit();
         if (landlordAmount > deductionCap) revert ExceedsDeductionCap(landlordAmount, deductionCap);
 

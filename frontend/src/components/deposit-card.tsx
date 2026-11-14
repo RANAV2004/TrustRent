@@ -1,8 +1,10 @@
 "use client";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { AgreementPanel } from "@/components/agreement";
 import { ConditionPhotos } from "@/components/condition-photos";
-import { Deposit, networkLabel, proposeSettlement, respondToSettlement, STATUS_LABEL } from "@/lib/deposits";
+import { DisputeNotes } from "@/components/dispute-notes";
+import { Deposit, markMovedOut, networkLabel, proposeSettlement, respondToSettlement, STATUS_LABEL } from "@/lib/deposits";
 import { formatINR } from "@/lib/format";
 const date = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "";
@@ -10,6 +12,7 @@ const tone: Record<Deposit["status"], string> = {
   held: "bg-vault-soft text-vault",
   settlement_proposed: "bg-amber-soft text-amber",
   disputed: "bg-claim-soft text-claim",
+  settling: "bg-amber-soft text-amber",
   settled: "bg-mist text-ink",
 };
 export function Hash({ label, value, href }: { label: string; value: string | null; href?: string | null }) { // hash
@@ -85,10 +88,21 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
             <dd className="break-all">{d.payment.reference}</dd>
           </div>
         )}
-        {d.settledAt && <div><dt className="text-muted">Settled on</dt><dd>{date(d.settledAt)}</dd></div>}
+        {d.movedOutAt && <div><dt className="text-muted">Moved out</dt><dd>{date(d.movedOutAt)}</dd></div>}
+        {d.settledAt && <div><dt className="text-muted">Settled on</dt><dd>{date(d.settledAt)}{d.autoSettled ? " (automatic)" : ""}</dd></div>}
         {d.ownerPayout && <div><dt className="text-muted">Owner payout</dt><dd>{d.ownerPayout === "paid" ? "Paid" : "Due"}</dd></div>}
       </dl>
       {d.reason && <p className="rounded-lg bg-mist px-3 py-2 text-sm"><span className="font-medium">Reason for deduction:</span> {d.reason}</p>}
+      {d.claimBy && (
+        <p className="rounded-lg bg-amber-soft px-3 py-2 text-sm">
+          {d.role === "owner" ? "Propose the settlement" : "The owner must propose the settlement"} by <strong>{date(d.claimBy)}</strong>. If not, the full deposit is refunded automatically.
+        </p>
+      )}
+      {d.respondBy && (
+        <p className="rounded-lg bg-amber-soft px-3 py-2 text-sm">
+          {d.role === "tenant" ? "Accept or dispute" : "The tenant must answer"} by <strong>{date(d.respondBy)}</strong>. With no answer, the proposal is accepted automatically.
+        </p>
+      )}
       <div className="flex flex-col gap-2 border-t border-line pt-3">
         <p className="text-sm font-medium">Receipt, {networkLabel(d.receipt.network)}</p>
         <Hash label="Deposit receipt" value={d.receipt.recordTx} href={d.receipt.recordUrl} />
@@ -96,7 +110,16 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
         <p className="text-xs text-muted">Keep the deposit ID or receipt hash. Anyone with an account can check it on <Link href={`/deposits/lookup?q=${d.id}`} className="text-vault hover:underline">Look up deposit</Link>.</p>
       </div>
       <VerifiedBadge d={d} />
+      {d.role && d.role !== "admin" && <AgreementPanel d={d} />}
       {d.role && <ConditionPhotos depositId={d.id} />}
+      {d.role && d.role !== "admin" && <DisputeNotes d={d} />}
+      {(d.role === "tenant" || d.role === "owner") && d.status === "held" && !d.movedOutAt && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-mist p-4 text-sm">
+          <span>Has the tenant moved out? Recording it starts the owner&apos;s claim window.</span>
+          <button type="button" disabled={busy} onClick={() => confirm("Record the move-out now?") && act(() => markMovedOut(d.id))}
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 hover:border-ink/40">Record move-out</button>
+        </div>
+      )}
       {d.role === "owner" && (d.status === "held" || d.status === "settlement_proposed") && (
         <form onSubmit={propose} className="flex flex-col gap-3 rounded-xl bg-mist p-4">
           <p className="text-sm font-medium">{d.status === "held" ? "Tenant moved out? Propose the settlement" : "Change your proposal"}</p>

@@ -6,6 +6,11 @@ os.environ["STORAGE_LOCAL_DIR"] = os.path.join(_tmp, "storage")
 os.environ["MEDIA_DIR"] = os.path.join(_tmp, "media")
 os.environ["DEBUG"] = "false"
 os.environ["DEMO_ADMIN_PASSWORD"] = "test-admin-password"
+os.environ["DEMO_MODE"] = "true"  # most tests exercise demo flows; production-mode tests switch it off
+os.environ["ENABLE_LEGACY_API"] = "true"
+os.environ["RATE_LIMIT_ENABLED"] = "false"  # rate-limit tests switch it on
+os.environ["RUN_BACKGROUND_JOBS"] = "false"
+os.environ["ENVIRONMENT"] = "test"
 import pytest  # noqa: E402
 from app.core.database import engine, Base  # noqa: E402
 import app.models  # noqa: E402,F401
@@ -28,6 +33,26 @@ def outbox(monkeypatch):
     monkeypatch.setattr(settings, "SMTP_APP_PASSWORD", "test-app-password")
     monkeypatch.setattr("app.api.v1.accounts.send_code_email", fake_send)
     return sent
+@pytest.fixture(autouse=True)
+async def mail(monkeypatch):  # every email (notifications, reset links) lands here instead of SMTP
+    from app.services import notify
+    sent: list[dict] = []
+    async def fake_send(to, subject, text, html=None):
+        sent.append({"to": to, "subject": subject, "text": text})
+    monkeypatch.setattr("app.services.mailer.send_email", fake_send)
+    monkeypatch.setattr("app.api.v1.accounts.send_email", fake_send)
+    yield sent
+    await notify.drain()
+
+
+@pytest.fixture(autouse=True)
+def fresh_limits():
+    from app.core.ratelimit import limiter
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 @pytest.fixture
 async def client():
     from httpx import ASGITransport, AsyncClient

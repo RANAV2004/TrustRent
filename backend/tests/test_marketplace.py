@@ -6,8 +6,13 @@ from httpx import AsyncClient
 from app.api.v1 import messages as messages_api
 from app.core.database import AsyncSessionLocal
 from app.services.seed import seed_sample_listings
-PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
-       b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82")
+def _png() -> bytes:
+    from PIL import Image
+    out = io.BytesIO()
+    Image.new("RGB", (4, 4), (200, 120, 40)).save(out, format="PNG")
+    return out.getvalue()
+PNG = _png()
+JPG = b"\xff\xd8\xff"  # JPEG signature: ID documents must be a real image or PDF
 def tag() -> str:
     return uuid.uuid4().hex[:6]
 def profile(t: str, account: str = "seeker", phone_tail: int | None = None) -> dict:
@@ -63,7 +68,7 @@ async def test_premium_needs_identity(client):
     early = await client.post("/api/v1/subscriptions", headers=headers, json={"planId": "month"})
     assert early.status_code == 403
     idv = await client.post("/api/v1/users/me/identity", headers=headers, data={"docType": "PAN card"},
-                            files={"file": ("pan.jpg", io.BytesIO(b"fake-pan-image"), "image/jpeg")})
+                            files={"file": ("pan.jpg", io.BytesIO(JPG + b"fake-pan-image"), "image/jpeg")})
     assert idv.status_code == 200 and idv.json()["user"]["idVerified"] is True
     sub = await client.post("/api/v1/subscriptions", headers=headers, json={"planId": "month"})
     assert sub.status_code == 200
@@ -77,8 +82,8 @@ async def owner_with_listing(client: AsyncClient) -> tuple[dict, dict, dict]:
         "/api/v1/owner/application", headers=oh,
         data={"relation": "owner", "idDocType": "Masked Aadhaar card", "propertyDocType": "Sale deed / title deed",
               "propertyAddress": "Flat 302, Shanti Residency, Vijay Nagar, Indore 452010"},
-        files={"idFile": ("aadhaar.jpg", io.BytesIO(b"id"), "image/jpeg"),
-               "propertyFile": ("deed.pdf", io.BytesIO(b"deed"), "application/pdf")},
+        files={"idFile": ("aadhaar.jpg", io.BytesIO(JPG + b"id"), "image/jpeg"),
+               "propertyFile": ("deed.pdf", io.BytesIO(b"%PDF-deed"), "application/pdf")},
     )
     assert app_res.status_code == 201 and app_res.json()["application"]["status"] == "submitted"
     approved = await client.post(f"/api/v1/owner/application/{owner['id']}/review", headers=oh, json={"approve": True})
@@ -108,7 +113,7 @@ async def test_owner_listing_early_access_and_visit(client):
     locked = await client.post("/api/v1/conversations", headers=sh, json={"listingId": listing["id"]})
     assert locked.status_code == 403
     await client.post("/api/v1/users/me/identity", headers=sh, data={"docType": "Passport"},
-                      files={"file": ("p.jpg", io.BytesIO(b"passport"), "image/jpeg")})
+                      files={"file": ("p.jpg", io.BytesIO(JPG + b"passport"), "image/jpeg")})
     await client.post("/api/v1/subscriptions", headers=sh, json={"planId": "week"})
     conv = await client.post("/api/v1/conversations", headers=sh, json={"listingId": listing["id"]})
     assert conv.status_code == 200

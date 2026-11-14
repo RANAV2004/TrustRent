@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT_DIR / "backend"))
 from app.main import app
 from app.core.errors import ERROR_CATALOG
 
-HAND_OFF_DIR = ROOT_DIR / "docs" / "hand_off"
+HAND_OFF_DIR = ROOT_DIR / "Docs" / "hand_off"
 CONTRACTS_HAND_OFF_DIR = HAND_OFF_DIR / "contracts"
 ABIS_DIR = CONTRACTS_HAND_OFF_DIR / "abis"
 

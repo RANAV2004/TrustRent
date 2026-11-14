@@ -1,24 +1,31 @@
+import hashlib
 import secrets
 import uuid
 from datetime import timedelta
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field, ValidationError, TypeAdapter
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token
+from app.core import totp
+from app.core.errors import field_error
+from app.core.ratelimit import enforce, ip_limit
+from app.core.security import create_access_token, create_mfa_token, decode_mfa_token
+from app.models.extras import PasswordReset
 from app.models.marketplace import EmailVerification, IdentitySubmission, utcnow
 from app.models.deposits import Payment
 from app.models.user import User
 from app.services.accounts import (
-    USERNAME_RE, has_premium, hash_secret, normalise_phone, role_for, user_out,
+    DUMMY_HASH, USERNAME_RE, has_premium, hash_secret, is_staff, normalise_phone, role_for, user_out,
     verify_secret,
 )
+from app.services.images import is_document, read_limited
+from app.services.notify import notify
 from app.services.hash_service import HashService
-from app.services.mailer import EmailError, email_enabled, send_code_email
+from app.services.mailer import EmailError, email_enabled, send_code_email, send_email
 from app.services.register import try_rebuild_register
 from app.services.files import private_storage
 router = APIRouter(tags=["Accounts (web app)"])
@@ -26,12 +33,32 @@ _email = TypeAdapter(EmailStr)
 PLANS = {"week": (7, 99), "month": (30, 299), "quarter": (90, 699)}
 ID_DOC_TYPES = {"Masked Aadhaar card", "PAN card", "Passport", "Voter ID", "Driving licence"}
 MAX_DOC_BYTES = 10 * 1024 * 1024
-def field_error(message: str, field: str | None = None, code: int = status.HTTP_400_BAD_REQUEST) -> HTTPException:
-    return HTTPException(status_code=code, detail={"message": message, "field": field})
+RESET_MINUTES = 30
+__all__ = ["field_error"]
+
+
 def session(user: User) -> dict:
     if user.banned_at or user.deleted_at:
         raise field_error("This account has been suspended. Contact TrustRent support.", None, status.HTTP_403_FORBIDDEN)
-    return {"access_token": create_access_token(subject=user.id), "token_type": "bearer", "user": user_out(user)}
+    return {"access_token": create_access_token(subject=user.id, version=user.token_version or 0),
+            "token_type": "bearer", "user": user_out(user)}
+
+
+async def start_session(db: AsyncSession, user: User) -> dict:
+    """Normal users get a session. Admins and arbitrators must pass a TOTP second step first."""
+    if user.banned_at or user.deleted_at:
+        raise field_error("This account has been suspended. Contact TrustRent support.", None, status.HTTP_403_FORBIDDEN)
+    if not (settings.REQUIRE_STAFF_MFA and is_staff(user)):
+        return session(user)
+    out = {"mfaRequired": True, "mfaToken": create_mfa_token(user.id, user.token_version or 0),
+           "enrolled": bool(user.totp_enabled)}
+    if not user.totp_enabled:  # first sign-in: show the setup key until a code confirms it
+        if not user.totp_secret:
+            user.totp_secret = totp.new_secret()
+            await db.commit()
+        out["secret"] = user.totp_secret
+        out["otpauthUrl"] = totp.otpauth_url(user.totp_secret, user.email)
+    return out
 class ProfileIn(BaseModel):
     firstName: str = Field(max_length=80)
     lastName: str = Field(max_length=80)
@@ -72,6 +99,8 @@ async def validate_profile(p: ProfileIn, db: AsyncSession, me: User | None = Non
     if not p.country.strip():
         raise field_error("Choose your country.", "country")
     me_id = me.id if me else ""
+    if me is not None and email != (me.email or "").lower():
+        raise field_error("Your email can't be changed once the account is created.", "email")
     if email in {e.lower() for e in settings.ADMIN_EMAILS} and (me is None or (me.email or "").lower() != email):
         raise field_error("An account with this email already exists. Sign in instead.", "email", status.HTTP_409_CONFLICT)
     for column, value, field, msg in (
@@ -101,7 +130,7 @@ async def validate_sign_up(body: SignUpIn, db: AsyncSession) -> tuple[str, str]:
     if body.accountType not in ("seeker", "owner"):
         raise field_error("Choose whether you're looking for a home or renting one out.", "accountType")
     return email, phone
-@router.post("/auth/signup/email-code")  # signup code
+@router.post("/auth/signup/email-code", dependencies=[Depends(ip_limit("signup-code", 10, 3600))])  # signup code
 async def sign_up_email_code(body: SignUpIn, db: AsyncSession = Depends(get_db)):
     email, _ = await validate_sign_up(body, db)
     if not email_enabled():
@@ -137,7 +166,7 @@ async def check_email_code(db: AsyncSession, email: str, code: str) -> None:
         await db.commit()
         raise field_error("That code isn't right. Check the email and try again.", "emailCode")
     await db.delete(row)
-@router.post("/auth/signup", status_code=201)  # sign up
+@router.post("/auth/signup", status_code=201, dependencies=[Depends(ip_limit("signup", 20, 3600))])  # sign up
 async def sign_up(body: SignUpIn, db: AsyncSession = Depends(get_db)):
     email, phone = await validate_sign_up(body, db)
     await check_email_code(db, email, body.emailCode)
@@ -148,14 +177,16 @@ async def sign_up(body: SignUpIn, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
     return session(user)
-@router.post("/auth/password-login")  # user login
+@router.post("/auth/password-login", dependencies=[Depends(ip_limit("login", 30, 300))])  # user login
 async def password_login(body: PasswordLoginIn, db: AsyncSession = Depends(get_db)):
-    ident = body.identifier.strip().lower()
+    ident = body.identifier.strip().lower()[:255]
+    enforce(f"login:id:{ident}", 10, 900, "Too many sign-in attempts for this account. Wait 15 minutes or reset your password.")
     user = await db.scalar(select(User).where(or_(func.lower(User.email) == ident, func.lower(User.username) == ident)))
-    if not user or not verify_secret(body.password, user.password_hash):
+    ok = verify_secret(body.password, user.password_hash if user and user.password_hash else DUMMY_HASH)  # same work either way
+    if not user or not user.password_hash or not ok:
         raise field_error("That username/email and password don't match.", None, status.HTTP_401_UNAUTHORIZED)
-    return session(user)
-@router.post("/auth/google")  # google login
+    return await start_session(db, user)
+@router.post("/auth/google", dependencies=[Depends(ip_limit("google", 30, 300))])  # google login
 async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
     if body.credential and settings.GOOGLE_CLIENT_ID:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -184,10 +215,106 @@ async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    return await start_session(db, user)
+
+
+class MfaIn(BaseModel):
+    mfaToken: str
+    code: str = Field(max_length=10)
+
+
+@router.post("/auth/mfa/verify", dependencies=[Depends(ip_limit("mfa", 30, 300))])  # staff 2nd step
+async def verify_mfa(body: MfaIn, db: AsyncSession = Depends(get_db)):
+    payload = decode_mfa_token(body.mfaToken)
+    if not payload:
+        raise field_error("The sign-in step expired. Sign in again.", None, status.HTTP_401_UNAUTHORIZED)
+    user = await db.get(User, payload.get("sub"))
+    if not user or int(payload.get("ver") or 0) != int(user.token_version or 0) or not user.totp_secret:
+        raise field_error("The sign-in step expired. Sign in again.", None, status.HTTP_401_UNAUTHORIZED)
+    enforce(f"mfa:user:{user.id}", 5, 300, "Too many wrong codes. Wait 5 minutes and sign in again.")
+    step = totp.verify(user.totp_secret, body.code)
+    if step is None or (user.totp_last_step is not None and step <= user.totp_last_step):  # each code works once
+        raise field_error("That code isn't right. Use the current 6-digit code from your authenticator app.", "code",
+                          status.HTTP_401_UNAUTHORIZED)
+    first = not user.totp_enabled
+    user.totp_enabled, user.totp_last_step = True, step
+    await db.commit()
+    await db.refresh(user)
+    if first:
+        notify(user, "Two-step sign-in is on", ["An authenticator app was linked to your TrustRent staff account. "
+                                                "If this wasn't you, contact the other admins straight away."], force=True)
     return session(user)
-@router.post("/auth/password/forgot")  # forgot password
-async def forgot_password(body: ForgotIn):
-    return {"ok": True, "message": "If an account uses that email, a reset link is on its way."}
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+@router.post("/auth/password/forgot", dependencies=[Depends(ip_limit("forgot", 10, 3600))])  # forgot password
+async def forgot_password(body: ForgotIn, db: AsyncSession = Depends(get_db)):
+    reply = {"ok": True, "message": "If an account uses that email, a reset link is on its way."}
+    email = body.email.strip().lower()[:255]
+    enforce(f"forgot:email:{email}", 3, 3600, "We've already sent a few links to this email. Check your inbox or try again in an hour.")
+    user = await db.scalar(select(User).where(func.lower(User.email) == email))
+    if not user or user.deleted_at or user.banned_at or user.is_demo or not email_enabled():
+        return reply  # same answer: never reveal who has an account
+    token = secrets.token_urlsafe(32)
+    db.add(PasswordReset(token_hash=_token_hash(token), user_id=user.id, expires_at=utcnow() + timedelta(minutes=RESET_MINUTES)))
+    await db.commit()
+    link = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={token}"
+    try:
+        await send_email(user.email, "Reset your TrustRent password",
+                         f"Someone asked to reset the password for your TrustRent account.\n\nOpen this link within "
+                         f"{RESET_MINUTES} minutes to choose a new one:\n{link}\n\nIf it wasn't you, ignore this email: "
+                         "your password stays the same.")
+    except EmailError:
+        pass
+    return reply
+
+
+class ResetIn(BaseModel):
+    token: str = Field(max_length=200)
+    password: str = Field(max_length=200)
+
+
+@router.post("/auth/password/reset", dependencies=[Depends(ip_limit("reset", 20, 3600))])  # set new password
+async def reset_password(body: ResetIn, db: AsyncSession = Depends(get_db)):
+    row = await db.get(PasswordReset, _token_hash(body.token.strip()))
+    if not row or row.used_at or row.expires_at < utcnow():
+        raise field_error("This reset link has expired or was already used. Ask for a new one.", "token")
+    validate_password(body.password)
+    user = await db.get(User, row.user_id)
+    if not user or user.deleted_at or user.banned_at:
+        raise field_error("This reset link has expired or was already used. Ask for a new one.", "token")
+    user.password_hash = hash_secret(body.password)
+    user.token_version = (user.token_version or 0) + 1  # sign out every old session
+    now = utcnow()
+    for other in await db.scalars(select(PasswordReset).where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None))):
+        other.used_at = now
+    await db.commit()
+    await db.refresh(user)
+    notify(user, "Your password was changed", ["Your TrustRent password was just changed and all other devices were "
+                                               "signed out. If this wasn't you, reset it again and contact support."], force=True)
+    return {"ok": True}
+
+
+@router.post("/auth/logout-all")  # sign out everywhere
+async def logout_all(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    user.token_version = (user.token_version or 0) + 1
+    await db.commit()
+    return {"ok": True}
+
+
+class NotificationsIn(BaseModel):
+    email: bool
+
+
+@router.put("/users/me/notifications")  # email on/off
+async def set_notifications(body: NotificationsIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    user.email_notifications = body.email
+    await db.commit()
+    await db.refresh(user)
+    return {"user": user_out(user)}
 @router.get("/users/me")  # profile
 async def me(user: User = Depends(get_current_user)):
     return {"user": user_out(user)}
@@ -217,11 +344,12 @@ async def upload_identity(
 ):
     if docType not in ID_DOC_TYPES:
         raise field_error("Choose a supported ID document.", "docType")
-    content = await file.read()
+    enforce(f"upload:user:{user.id}", 20, 3600, "Too many uploads. Try again later.")
+    content = await read_limited(file, MAX_DOC_BYTES, "file")
     if not content:
         raise field_error("Upload a photo or scan of the document.", "file")
-    if len(content) > MAX_DOC_BYTES:
-        raise field_error("The file is larger than 10 MB.", "file")
+    if not is_document(content):
+        raise field_error("Upload a PDF or a JPG, PNG or WebP photo of the document.", "file")
     sub_id = str(uuid.uuid4())
     path, iv = private_storage().store(f"identity_{user.id}_{sub_id[:8]}", content)
     doc_hash = HashService.hash_bytes(content)

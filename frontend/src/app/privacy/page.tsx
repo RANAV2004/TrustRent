@@ -4,7 +4,7 @@ export const metadata: Metadata = { title: "TrustRent Privacy Policy" };
 export default function PrivacyPage() { // privacy
   return (
     <LegalPage title="Privacy Policy">
-      <p>TrustRent helps people in India find verified rental homes and keeps security deposits on a tamper-proof record. This policy explains what personal data we collect, why, who we share it with, and the rights you have under the Digital Personal Data Protection Act, 2023 (DPDP Act).</p>
+      <p>TrustRent helps people in India find verified rental homes and keeps security deposits on a tamper-evident record. This policy explains what personal data we collect, why, who we share it with, and the rights you have under the Digital Personal Data Protection Act, 2023 (DPDP Act).</p>
       <h2>What we collect</h2>
       <ul>
         <li><strong>Account details:</strong> name, username, email, phone number, country, and a scrambled (hashed) password. If you sign in with Google, we receive your name and email from Google.</li>
@@ -12,7 +12,8 @@ export default function PrivacyPage() { // privacy
         <li><strong>Listings:</strong> photos, address, location pin, rent, deposit and other details owners publish.</li>
         <li><strong>Messages and visit requests</strong> between tenants and owners.</li>
         <li><strong>Payments:</strong> amount, date and the payment reference from our payment gateway. We never see or store your card, UPI PIN or bank login.</li>
-        <li><strong>Deposit records:</strong> deposit amount, deductions, refunds and their reasons.</li>
+        <li><strong>Deposit records:</strong> deposit amount, deductions, refunds and their reasons, move-in and move-out photos, and statements you write in a dispute.</li>
+        <li><strong>Rent agreements:</strong> the terms, and for each signature the name you typed, the time, your IP address and browser, so a signature can be checked later.</li>
       </ul>
       <h2>Why we use it</h2>
       <ul>
@@ -20,6 +21,7 @@ export default function PrivacyPage() { // privacy
         <li>To verify identities and property ownership before homes are listed or deposits are paid.</li>
         <li>To show listings, deliver messages and arrange visits.</li>
         <li>To take payments, hold deposits, settle and refund them, and keep receipts.</li>
+        <li>To email you about messages, visits, deposits, agreements and saved searches. You can turn these off on your Account page; security emails such as password changes are always sent.</li>
         <li>To prevent fraud and meet legal obligations.</li>
       </ul>
       <p>By creating an account you consent to this processing. You can withdraw consent at any time by deleting your account (see below); this does not affect processing already done, or records we must keep by law.</p>
@@ -32,7 +34,7 @@ export default function PrivacyPage() { // privacy
       <h2>Who we share it with</h2>
       <ul>
         <li>The other party of a rental: owners see a tenant&apos;s name and messages; tenants see the owner&apos;s name and, after a confirmed visit, the address.</li>
-        <li>TrustRent admins, who can read conversations on the platform only to check safety reports and settle deposit disputes.</li>
+        <li>TrustRent admins and appointed arbitrators, who can read conversations on the platform only to check safety reports and settle deposit disputes.</li>
         <li>Service providers who process data for us: payment gateway (Razorpay), email provider (Google Gmail) for verification codes, cloud hosting and storage. They may use it only to provide their service.</li>
         <li>Authorities, when the law requires it.</li>
       </ul>

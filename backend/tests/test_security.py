@@ -27,7 +27,7 @@ async def make_arbitrator(client):
     return user, headers
 
 
-async def pending_id(client, monkeypatch, headers, name="id.jpg", data=b"id-bytes"):
+async def pending_id(client, monkeypatch, headers, name="id.jpg", data=b"\xff\xd8\xffid-bytes"):
     monkeypatch.setattr(settings, "DEMO_MODE", False)
     res = await client.post("/api/v1/users/me/identity", headers=headers, data={"docType": "PAN card"},
                             files={"file": (name, io.BytesIO(data), "image/jpeg")})
@@ -114,19 +114,19 @@ async def test_identity_verify_does_not_verify(client):
     assert short.status_code == 400
 
 
-# 4. email change to the admin address
-async def test_cannot_change_email_to_admin(client):
+# 4. the email is fixed once the account exists (no admin address, no someone-else's address)
+async def test_email_cannot_be_changed(client):
     await admin_headers(client)
     user, uh = await signup(client)
     t = user["username"].removeprefix("user_")
     body = {k: v for k, v in profile(t).items() if k not in ("password", "accountType")}
-    for email in (ADMIN, ADMIN.upper()):
+    for email in (ADMIN, ADMIN.upper(), "victim@gmail.com", f"new_{t}@example.com"):
         res = await client.put("/api/v1/users/me", headers=uh, json=body | {"email": email})
-        assert res.status_code == 409 and res.json()["detail"]["field"] == "email"
+        assert res.status_code == 400 and res.json()["detail"]["field"] == "email"
     me = (await client.get("/api/v1/users/me", headers=uh)).json()["user"]
-    assert me["email"] != ADMIN and me["isAdmin"] is False
-    ok = await client.put("/api/v1/users/me", headers=uh, json=body | {"email": f"new_{t}@example.com"})
-    assert ok.status_code == 200 and ok.json()["user"]["email"] == f"new_{t}@example.com"
+    assert me["email"] == user["email"] and me["isAdmin"] is False
+    same = await client.put("/api/v1/users/me", headers=uh, json=body | {"email": user["email"].upper(), "country": "Nepal"})
+    assert same.status_code == 200 and same.json()["user"]["country"] == "Nepal"  # other fields still editable
 
 
 async def test_cannot_sign_up_with_admin_email(client):
@@ -176,7 +176,11 @@ async def test_admin_is_seeded_in_live_mode(client, monkeypatch):
 async def test_documents_never_render_html(client, monkeypatch):
     ah = await admin_headers(client)
     applicant, uh = await signup(client)
-    await pending_id(client, monkeypatch, uh, name="evil.html", data=b"<script>alert(1)</script>")
+    monkeypatch.setattr(settings, "DEMO_MODE", False)
+    refused = await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "PAN card"},
+                                files={"file": ("evil.html", io.BytesIO(b"<script>alert(1)</script>"), "image/jpeg")})
+    assert refused.status_code == 400 and refused.json()["detail"]["field"] == "file"  # not a PDF or image
+    await pending_id(client, monkeypatch, uh, name="evil.html", data=b"\xff\xd8\xff<script>alert(1)</script>")
     sub = (await submissions(client, ah, applicant["id"]))[0]
     res = await client.get(f"/api/v1/admin/identity/{sub['id']}/file", headers=ah)
     assert res.status_code == 200
@@ -199,7 +203,7 @@ async def test_owner_documents_for_admin(client):
     ah = await admin_headers(client)
     owner, _, _ = await owner_with_listing(client)
     idf = await client.get(f"/api/v1/admin/owner-applications/{owner['id']}/id", headers=ah)
-    assert idf.status_code == 200 and idf.content == b"id"
+    assert idf.status_code == 200 and idf.content == b"\xff\xd8\xffid"
     deed = await client.get(f"/api/v1/admin/owner-applications/{owner['id']}/property", headers=ah)
     assert deed.headers["content-type"] == "application/pdf"
     assert (await client.get(f"/api/v1/admin/owner-applications/{owner['id']}/other", headers=ah)).status_code == 404
@@ -262,7 +266,7 @@ async def test_payment_edge_cases(client, monkeypatch):
     unverified = await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "premium", "planId": "week"})
     assert unverified.status_code == 403
     await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "Passport"},
-                      files={"file": ("p.jpg", io.BytesIO(b"passport"), "image/jpeg")})
+                      files={"file": ("p.jpg", io.BytesIO(b"\xff\xd8\xffpassport"), "image/jpeg")})
     assert (await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "premium", "planId": "year"})).status_code == 400
     assert (await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "gift"})).status_code == 400
     assert (await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "deposit", "listingId": "NOPE"})).status_code == 404
@@ -275,7 +279,7 @@ async def test_payment_edge_cases(client, monkeypatch):
 async def test_owner_cannot_pay_deposit_on_own_home(client):
     owner, oh, listing = await owner_with_listing(client)
     await client.post("/api/v1/users/me/identity", headers=oh, data={"docType": "Passport"},
-                      files={"file": ("p.jpg", io.BytesIO(b"passport"), "image/jpeg")})
+                      files={"file": ("p.jpg", io.BytesIO(b"\xff\xd8\xffpassport"), "image/jpeg")})
     res = await client.post("/api/v1/payments/order", headers=oh, json={"purpose": "deposit", "listingId": listing["id"]})
     assert res.status_code == 400
 

@@ -16,14 +16,16 @@ async def admin_headers(client):
         await seed_demo_admin(db)
     res = await client.post("/api/v1/auth/password-login", json={"identifier": "admin", "password": settings.DEMO_ADMIN_PASSWORD})
     assert res.status_code == 200, res.text
-    assert res.json()["user"]["isAdmin"] is True
-    return {"Authorization": f"Bearer {res.json()['access_token']}"}
+    from tests.staff import finish_mfa
+    body = await finish_mfa(client, res)
+    assert body["user"]["isAdmin"] is True
+    return {"Authorization": f"Bearer {body['access_token']}"}
 async def test_admin_desk_and_excel_register(client, monkeypatch):
     ah = await admin_headers(client)
     user, uh = await signup(client)
     monkeypatch.setattr(settings, "DEMO_MODE", False)
     res = await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "PAN card"},
-                            files={"file": ("pan.jpg", io.BytesIO(b"pan-bytes"), "image/jpeg")})
+                            files={"file": ("pan.jpg", io.BytesIO(b"\xff\xd8\xffpan-bytes"), "image/jpeg")})
     assert res.json()["pendingReview"] is True and res.json()["user"]["idVerified"] is False
     blocked = await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "premium", "planId": "week"})
     assert blocked.status_code == 403
@@ -32,7 +34,7 @@ async def test_admin_desk_and_excel_register(client, monkeypatch):
     sub = next(s for s in desk["identities"] if s["userId"] == user["id"])
     assert sub["status"] == "pending" and sub["applicant"]["email"] == user["email"]
     doc = await client.get(f"/api/v1/admin/identity/{sub['id']}/file", headers=ah)
-    assert doc.content == b"pan-bytes" and doc.headers["content-type"] == "image/jpeg"
+    assert doc.content == b"\xff\xd8\xffpan-bytes" and doc.headers["content-type"] == "image/jpeg"
     ok = await client.post(f"/api/v1/admin/identity/{sub['id']}/review", headers=ah, json={"approve": True})
     assert ok.json()["submission"]["status"] == "approved"
     assert (await client.get("/api/v1/users/me", headers=uh)).json()["user"]["idVerified"] is True
@@ -86,7 +88,7 @@ async def test_signup_email_failure_and_no_smtp(client, monkeypatch):
 async def verified_tenant_with_visit(client, listing, oh):
     tenant, th = await signup(client)
     await client.post("/api/v1/users/me/identity", headers=th, data={"docType": "Passport"},
-                      files={"file": ("p.jpg", io.BytesIO(b"passport"), "image/jpeg")})
+                      files={"file": ("p.jpg", io.BytesIO(b"\xff\xd8\xffpassport"), "image/jpeg")})
     order = await client.post("/api/v1/payments/order", headers=th, json={"purpose": "premium", "planId": "week"})
     await client.post("/api/v1/payments/verify", headers=th, json={"orderId": order.json()["orderId"]})
     early = await client.post("/api/v1/payments/order", headers=th, json={"purpose": "deposit", "listingId": listing["id"]})
@@ -150,7 +152,7 @@ async def test_tenant_accepts_settlement(client):
 async def test_payments_off_without_keys(client, monkeypatch, demo):
     _, uh = await signup(client)
     await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "PAN card"},
-                      files={"file": ("pan.jpg", io.BytesIO(b"x"), "image/jpeg")})
+                      files={"file": ("pan.jpg", io.BytesIO(b"\xff\xd8\xffx"), "image/jpeg")})
     monkeypatch.setattr(settings, "DEMO_MODE", demo)
     res = await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "premium", "planId": "month"})
     assert res.status_code == 503

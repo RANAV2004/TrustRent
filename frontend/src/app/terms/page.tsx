@@ -25,7 +25,7 @@ export default function TermsPage() { // terms
       </ul>
       <h2>Security deposits</h2>
       <ul>
-        <li>The deposit is paid to TrustRent through our payment gateway, not to the owner, and a receipt is recorded on a tamper-proof ledger.</li>
+        <li>The deposit is paid to TrustRent through our payment gateway, not to the owner, and a receipt is recorded on a tamper-evident ledger.</li>
         <li>At move-out the owner proposes any deduction with a reason. The tenant accepts it or disputes it. In a dispute, TrustRent reviews the evidence and its decision on the split is final on the platform; it does not stop either party from going to court.</li>
         <li>The tenant&apos;s refund goes back to the original payment method. The owner&apos;s share is paid out to the owner once settled.</li>
         <li>Deductions may never exceed the deposit. We recommend deposits of no more than two months&apos; rent, in line with the Model Tenancy Act, 2021.</li>

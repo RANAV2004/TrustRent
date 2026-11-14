@@ -39,12 +39,15 @@ async def test_ban_unban_and_listing_hidden(client):
     assert (await client.post(f"/api/v1/admin/users/{me['id']}/ban", headers=ah, json={})).status_code == 403
     res = await client.post(f"/api/v1/admin/users/{owner['id']}/ban", headers=ah, json={"reason": "Fake listing"})
     assert res.json()["user"]["banned"]["reason"] == "Fake listing"
-    assert (await client.get("/api/v1/users/me", headers=oh)).status_code == 403
+    assert (await client.get("/api/v1/users/me", headers=oh)).status_code == 401  # ban signs out every session
     login = await client.post("/api/v1/auth/password-login", json={"identifier": owner["username"], "password": "secret123"})
     assert login.status_code == 403 and "suspended" in login.json()["detail"]["message"]
     ids = [x["id"] for x in (await client.get("/api/v1/listings", headers=sh)).json()]
     assert listing["id"] not in ids
     await client.post(f"/api/v1/admin/users/{owner['id']}/unban", headers=ah)
+    assert (await client.get("/api/v1/users/me", headers=oh)).status_code == 401  # old token stays dead
+    back = await client.post("/api/v1/auth/password-login", json={"identifier": owner["username"], "password": "secret123"})
+    oh = {"Authorization": f"Bearer {back.json()['access_token']}"}
     assert (await client.get("/api/v1/users/me", headers=oh)).status_code == 200
     rows = {u["id"]: u for u in (await client.get("/api/v1/admin/users", headers=ah)).json()}
     assert rows[owner["id"]]["banned"] is None and rows[owner["id"]]["listings"] == 1
@@ -65,7 +68,7 @@ async def test_delete_anonymises_and_premium_revoke(client):
     ah = await admin_headers(client)
     user, uh = await signup(client)
     await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "PAN card"},
-                      files={"file": ("pan.jpg", io.BytesIO(b"pan"), "image/jpeg")})
+                      files={"file": ("pan.jpg", io.BytesIO(b"\xff\xd8\xffpan"), "image/jpeg")})
     await client.post("/api/v1/subscriptions", headers=uh, json={"planId": "month"})
     prem = (await client.get("/api/v1/admin/premium", headers=ah)).json()
     assert any(p["user"]["id"] == user["id"] and p["amount"] == 299 for p in prem["payments"])
@@ -76,7 +79,7 @@ async def test_delete_anonymises_and_premium_revoke(client):
     assert gone.status_code == 200
     rows = {u["id"]: u for u in (await client.get("/api/v1/admin/users", headers=ah)).json()}
     assert rows[user["id"]]["deletedAt"] and rows[user["id"]]["name"] == "Deleted user" and rows[user["id"]]["phone"] == ""
-    assert (await client.get("/api/v1/users/me", headers=uh)).status_code == 403
+    assert (await client.get("/api/v1/users/me", headers=uh)).status_code == 401
     again = await client.post("/api/v1/auth/signup/email-code", json={
         "firstName": "A", "lastName": "B", "username": user["username"], "email": user["email"], "phone": user["phone"],
         "country": "India", "password": "secret123", "accountType": "seeker"})

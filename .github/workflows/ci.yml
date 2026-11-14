@@ -55,6 +55,9 @@ jobs:
       - name: Lint with Ruff
         run: ruff check backend/
 
+      - name: Check dependencies for known vulnerabilities
+        run: pip install pip-audit && pip-audit -r backend/requirements.txt
+
       - name: Run Pytest with Coverage Gate (Target >= 85%)
         run: pytest --cov=app --cov-config=backend/.coveragerc --cov-report=term-missing --cov-fail-under=85 backend/tests
 
@@ -76,6 +79,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Check dependencies for known vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Type Check
         run: npx tsc --noEmit

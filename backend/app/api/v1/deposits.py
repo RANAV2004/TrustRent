@@ -4,16 +4,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.accounts import field_error
-from app.api.v1.admin import require_admin
+from app.api.v1.admin import require_admin, require_reviewer
 from app.api.v1.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.deposits import Deposit, LedgerEntry, Payment
 from app.models.marketplace import Listing, utcnow
 from app.models.user import User
-from app.services import payments
-from app.services.accounts import display_name, iso, is_reviewer
-from app.services.ledger import ledger_state, record_deposit, record_settlement, verify
+from app.services.accounts import display_name, iso, is_admin, is_reviewer
+from app.services.ledger import ledger_state, record_deposit, verify
+from app.services.notify import notify
+from app.services.settlement import claim_by, respond_by, settle
 router = APIRouter(tags=["Deposits"])
 class ProposeIn(BaseModel):
     deducted: int = Field(ge=0)
@@ -35,8 +36,11 @@ async def deposit_out(db: AsyncSession, d: Deposit, viewer: User, with_check: bo
     out = {
         "id": d.id, "amount": d.amount, "currency": "INR", "status": d.status, "paidAt": iso(d.paid_at),
         "listing": {"id": d.listing_id, "title": listing.title if listing else "", "area": f"{listing.locality}, {listing.city}" if listing else ""},
-        "deducted": d.deducted, "refunded": d.refunded, "reason": d.deduction_reason,
+        "deducted": d.deducted, "refunded": d.refunded, "reason": d.deduction_reason if party else None,
         "proposedAt": iso(d.proposed_at), "settledAt": iso(d.settled_at),
+        "movedOutAt": iso(d.moved_out_at), "disputedAt": iso(d.disputed_at),
+        "respondBy": iso(respond_by(d)), "claimBy": iso(claim_by(d)), "ownerAsked": d.proposed_deducted,
+        "autoSettled": d.settled_by == "system",
         "receipt": {"network": d.network, "recordHash": d.record_hash, "recordTx": d.record_tx,
                     "recordUrl": _explorer(d.record_tx, d.network), "settleHash": d.settle_hash,
                     "settleTx": d.settle_tx, "settleUrl": _explorer(d.settle_tx, d.network)},
@@ -98,9 +102,37 @@ async def propose(deposit_id: str, body: ProposeIn, user: User = Depends(get_cur
         raise field_error("This deposit can't be changed now.", None, status.HTTP_409_CONFLICT)
     _check_amount(d, body)
     d.deducted, d.refunded = body.deducted, d.amount - body.deducted
+    d.proposed_deducted = body.deducted
     d.deduction_reason = body.reason.strip() or None
     d.proposed_by, d.proposed_at, d.status = user.id, utcnow(), "settlement_proposed"
     await db.commit()
+    from app.core.config import settings
+    notify(await db.get(User, d.tenant_id), f"Settlement proposed for {d.id}",
+           [f"The owner proposes keeping ₹{d.deducted:,} and refunding ₹{d.refunded:,}.",
+            f"Reason: {d.deduction_reason or 'no deduction'}",
+            f"Accept or dispute it within {settings.SETTLEMENT_RESPONSE_DAYS} days. If you don't answer, it is accepted automatically."],
+           "/deposits")
+    return await deposit_out(db, d, user, with_check=True)
+
+
+@router.post("/deposits/{deposit_id}/move-out")  # starts the owner's claim window
+async def move_out(deposit_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from app.core.config import settings
+    d = await _load(db, deposit_id)
+    if user.id not in (d.tenant_id, d.owner_id):
+        raise HTTPException(status_code=403, detail="Only the tenant or the owner can mark the move-out")
+    if d.status != "held":
+        raise field_error("This deposit is already in settlement.", None, status.HTTP_409_CONFLICT)
+    if d.moved_out_at:
+        raise field_error("The move-out is already recorded.", None, status.HTTP_409_CONFLICT)
+    d.moved_out_at, d.moved_out_by = utcnow(), user.id
+    await db.commit()
+    notify(await db.get(User, d.owner_id), f"Move-out recorded for {d.id}",
+           [f"Propose the settlement within {settings.MOVE_OUT_CLAIM_DAYS} days. If you don't, the full deposit "
+            "is refunded to the tenant automatically."], "/deposits")
+    if user.id == d.owner_id:
+        notify(await db.get(User, d.tenant_id), f"Move-out recorded for {d.id}",
+               ["The owner marked your move-out. Add move-out photos now so the settlement is fair."], "/deposits")
     return await deposit_out(db, d, user, with_check=True)
 @router.post("/deposits/{deposit_id}/respond")  # settle reply
 async def respond(deposit_id: str, body: RespondIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -110,21 +142,25 @@ async def respond(deposit_id: str, body: RespondIn, user: User = Depends(get_cur
     if d.status != "settlement_proposed":
         raise field_error("There's no settlement waiting for you.", None, status.HTTP_409_CONFLICT)
     if body.accept:
-        await _settle(db, d, user)
+        await settle(db, d, user.id, d.deducted or 0, d.deduction_reason)
     else:
-        d.status = "disputed"
-    await db.commit()
+        d.status, d.disputed_at = "disputed", utcnow()
+        await db.commit()
+        notify(await db.get(User, d.owner_id), f"Deposit {d.id} is disputed",
+               ["The tenant disputed your proposed deduction. A TrustRent reviewer will look at both sides. "
+                "Add your statement and move-out photos on the deposit page."], "/deposits")
+        admins = [e.lower() for e in settings.ADMIN_EMAILS]
+        for staff in await db.scalars(select(User).where(func.lower(User.email).in_(admins), User.deleted_at.is_(None))):
+            if is_admin(staff):
+                notify(staff, f"New dispute: {d.id}", [f"Deposit {d.id} needs a decision."], f"/admin/deposits/{d.id}")
     return await deposit_out(db, d, user, with_check=True)
-@router.post("/admin/deposits/{deposit_id}/settle")  # admin settle
-async def admin_settle(deposit_id: str, body: ProposeIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+@router.post("/admin/deposits/{deposit_id}/settle")  # admin / arbitrator decision
+async def admin_settle(deposit_id: str, body: ProposeIn, admin: User = Depends(require_reviewer), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if d.status == "settled":
         raise field_error("Already settled.", None, status.HTTP_409_CONFLICT)
     _check_amount(d, body)
-    d.deducted, d.refunded = body.deducted, d.amount - body.deducted
-    d.deduction_reason = body.reason.strip() or None
-    await _settle(db, d, admin)
-    await db.commit()
+    await settle(db, d, admin.id, body.deducted, body.reason)
     return await deposit_out(db, d, admin, with_check=True)
 @router.post("/admin/deposits", status_code=201)  # admin receipt
 async def record_offline_deposit(body: RecordIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
@@ -159,7 +195,7 @@ async def record_offline_deposit(body: RecordIn, admin: User = Depends(require_a
     await db.commit()
     return await deposit_out(db, d, admin, with_check=True)
 @router.get("/admin/deposits")  # admin deposits
-async def all_deposits(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+async def all_deposits(admin: User = Depends(require_reviewer), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(Deposit).order_by(Deposit.paid_at.desc()))
     state = await ledger_state(db)
     return [await deposit_out(db, d, admin, with_check=True, state=state) for d in rows]
@@ -171,18 +207,3 @@ async def owner_paid(deposit_id: str, admin: User = Depends(require_admin), db: 
     d.owner_payout = "paid"
     await db.commit()
     return await deposit_out(db, d, admin, with_check=True)
-async def _settle(db: AsyncSession, d: Deposit, by: User) -> None:
-    pay = await db.get(Payment, d.payment_id)
-    if d.refunded and pay and pay.provider == "razorpay" and pay.payment_id:
-        try:
-            r = await payments.refund(pay.payment_id, d.refunded)
-        except payments.PaymentError as e:
-            raise field_error(str(e), None, status.HTTP_502_BAD_GATEWAY) from None
-        d.refund_ref = r.get("id")
-    elif d.refunded and pay and pay.provider == "manual":
-        d.refund_ref = "manual-refund"
-    elif d.refunded:
-        d.refund_ref = "demo-refund"
-    d.owner_payout = "due" if d.deducted else None
-    d.settled_at, d.settled_by, d.status = utcnow(), by.id, "settled"
-    await record_settlement(db, d)

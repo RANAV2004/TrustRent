@@ -17,6 +17,9 @@ export interface User {
   accountType: AccountType;
   idVerified: boolean;
   isAdmin?: boolean;
+  isArbitrator?: boolean;
+  mfaEnabled?: boolean;
+  emailNotifications?: boolean;
   premium: Premium | null;
   createdAt: string;
 }
@@ -37,6 +40,18 @@ export class AuthError extends Error {
     super(message);
   }
 }
+export interface MfaChallenge {
+  mfaToken: string;
+  enrolled: boolean;
+  secret?: string;
+  otpauthUrl?: string;
+}
+// Staff (admins, arbitrators) must enter an authenticator code after the password.
+export class MfaRequiredError extends Error {
+  constructor(public challenge: MfaChallenge) {
+    super("Enter the code from your authenticator app.");
+  }
+}
 export interface AuthService {
   current(): Promise<User | null>;
   requestSignUpCode(input: SignUpInput): Promise<{ demoCode?: string }>;
@@ -44,6 +59,9 @@ export interface AuthService {
   signIn(identifier: string, password: string): Promise<User>;
   signInWithGoogle(email: string): Promise<User>;
   requestPasswordReset(email: string): Promise<void>;
+  resetPassword(token: string, password: string): Promise<void>;
+  completeMfa(mfaToken: string, code: string): Promise<User>;
+  setEmailNotifications(on: boolean): Promise<User>;
   updateProfile(input: ProfileInput): Promise<User>;
   setAccountType(type: AccountType): Promise<User>;
   verifyIdentity(docType: string, file?: File): Promise<User>;
@@ -199,12 +217,23 @@ class LocalAuthService implements AuthService {
   async requestPasswordReset(email: string) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw new AuthError("Enter a valid email address.", "email");
   }
+  async resetPassword(): Promise<void> {
+    throw new AuthError("Password reset needs the TrustRent server. It isn't available in the browser-only demo.");
+  }
+  async completeMfa(): Promise<User> {
+    throw new AuthError("Two-step sign-in needs the TrustRent server.");
+  }
+  async setEmailNotifications(on: boolean) {
+    return this.patchMe({ emailNotifications: on });
+  }
   async updateProfile(input: ProfileInput) {
     const errors = validateProfile(input);
     const first = Object.entries(errors)[0];
     if (first) throw new AuthError(first[1], first[0]);
     const me = await this.current();
     if (!me) throw new AuthError("Your session ended. Sign in again.");
+    if (me.email && input.email.toLowerCase() !== me.email.toLowerCase())
+      throw new AuthError("Your email can't be changed once the account is created.", "email");
     const list = this.load();
     if (list.some((s) => s.user.id !== me.id && s.user.username === input.username))
       throw new AuthError("That username is taken.", "username");
@@ -219,15 +248,19 @@ class LocalAuthService implements AuthService {
   }
 }
 class ApiAuthService implements AuthService {
-  private async session(p: Promise<{ access_token: string; user: User }>): Promise<User> {
-    const { access_token, user } = await p;
-    setToken(access_token);
-    return user;
+  private async session(p: Promise<{ access_token?: string; user?: User; mfaRequired?: boolean } & Partial<MfaChallenge>>): Promise<User> {
+    const res = await p;
+    if (res.mfaRequired && res.mfaToken) {
+      throw new MfaRequiredError({ mfaToken: res.mfaToken, enrolled: !!res.enrolled, secret: res.secret, otpauthUrl: res.otpauthUrl });
+    }
+    setToken(res.access_token ?? null);
+    return res.user as User;
   }
   private async call<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
     } catch (e) {
+      if (e instanceof MfaRequiredError) throw e;
       if (e instanceof ApiError) throw new AuthError(e.message, e.field);
       throw e;
     }
@@ -259,6 +292,15 @@ class ApiAuthService implements AuthService {
   }
   async requestPasswordReset(email: string) {
     await this.call(() => api("/auth/password/forgot", { json: { email } }));
+  }
+  async resetPassword(token: string, password: string) {
+    await this.call(() => api("/auth/password/reset", { json: { token, password } }));
+  }
+  completeMfa(mfaToken: string, code: string) {
+    return this.call(() => this.session(api("/auth/mfa/verify", { json: { mfaToken, code } })));
+  }
+  async setEmailNotifications(email: boolean) {
+    return this.call(async () => (await api<{ user: User }>("/users/me/notifications", { method: "PUT", json: { email } })).user);
   }
   async updateProfile(input: ProfileInput) {
     return this.call(async () => (await api<{ user: User }>("/users/me", { method: "PUT", json: input })).user);

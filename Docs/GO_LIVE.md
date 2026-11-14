@@ -92,3 +92,13 @@ The Privacy Policy (`/privacy`) and Terms of Use (`/terms`) are written for Indi
 ## 9. Switch off demo mode
 
 `DEMO_MODE=False` and `SEED_SAMPLE_LISTINGS=False` (removes the sample Indore homes and their auto-replying owners). With demo mode off and a key missing, that feature says it is unavailable instead of faking it: payments return "not set up" and sign-up is paused until email is set up.
+
+## Security settings added in v1.4
+
+- Set `ENVIRONMENT=production`. The API then refuses to start if `DEMO_MODE` is on, `JWT_SECRET` is weak, `ENABLE_LEGACY_API` is on, or `STORAGE_MASTER_KEY_HEX` is missing or the public sample key. Generate the key once with `python -c "import secrets;print(secrets.token_hex(32))"` and keep it safe: documents can't be decrypted without it.
+- Razorpay: add a webhook in the Razorpay Dashboard pointing to `https://<your-api>/api/v1/payments/webhook` for the events `payment.captured` and `order.paid`, and put its secret in `RAZORPAY_WEBHOOK_SECRET`.
+- Set `FRONTEND_URL` to the public web address so password-reset and notification emails link to the right site.
+- Admins and arbitrators set up an authenticator app at their first sign-in. If one loses it, run `python scripts/reset_staff_mfa.py <email>` from the `backend` folder on the server.
+- Rate limits are kept in memory per API process. If you run more than one API instance, move them to Redis.
+- Optional: `SENTRY_DSN` for error tracking and `LOG_JSON=True` for structured logs. Render's health check uses `/api/v1/health/ready`, which also checks the database.
+- Frontend: a production build talks to the API in `NEXT_PUBLIC_API_URL`. It never falls back to the browser-only demo unless `NEXT_PUBLIC_BROWSER_DEMO=true`.

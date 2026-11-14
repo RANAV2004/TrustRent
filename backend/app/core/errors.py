@@ -1,3 +1,10 @@
+from fastapi import HTTPException, status
+
+
+def field_error(message: str, field: str | None = None, code: int = status.HTTP_400_BAD_REQUEST) -> HTTPException:
+    return HTTPException(status_code=code, detail={"message": message, "field": field})
+
+
 ERROR_CATALOG = {
     "PartyNotVerified": {
         "code": "TR_ERR_001",
@@ -48,6 +55,11 @@ ERROR_CATALOG = {
         "code": "TR_ERR_010",
         "title": "Invalid Tenancy State",
         "message": "This action cannot be performed in the current state of the tenancy lifecycle."
+    },
+    "ArbitratorAlreadyAssigned": {
+        "code": "TR_ERR_012",
+        "title": "Arbitrator Already Assigned",
+        "message": "An approved arbitrator is already handling this dispute. Only the TrustRent admin can assign one, and only once."
     },
     "AlreadyInitialized": {
         "code": "TR_ERR_011",

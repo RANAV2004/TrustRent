@@ -49,6 +49,24 @@ def add_missing_columns(sync_conn) -> list[str]:
             sync_conn.exec_driver_sql(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}')
             added.append(f"{table.name}.{col.name}")
     return added
+UNIQUE_INDEXES = [  # added to old databases too; create_all only knows new tables
+    ("ux_ledger_prev_hash", "ledger_entries", "prev_hash"),
+]
+
+
+def add_indexes(sync_conn) -> list[str]:
+    import logging
+    made = []
+    for name, table, column in UNIQUE_INDEXES:
+        try:
+            with sync_conn.begin_nested():
+                sync_conn.exec_driver_sql(f'CREATE UNIQUE INDEX IF NOT EXISTS {name} ON "{table}" ("{column}")')
+            made.append(name)
+        except Exception as e:  # noqa: BLE001 - e.g. an old ledger that already forked
+            logging.getLogger(__name__).error("Could not create %s on %s.%s: %s", name, table, column, e)
+    return made
+
+
 async def get_db():
     async with AsyncSessionLocal() as session:
         try:

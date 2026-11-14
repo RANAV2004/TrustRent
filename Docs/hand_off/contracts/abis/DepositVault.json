@@ -10,6 +10,17 @@
     "type": "error"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "arbitrator",
+        "type": "address"
+      }
+    ],
+    "name": "ArbitratorAlreadyAssigned",
+    "type": "error"
+  },
+  {
     "inputs": [],
     "name": "ArbitratorInactivityTimeoutNotPassed",
     "type": "error"
@@ -315,6 +326,19 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "TenancyCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "tenantAmount",
@@ -400,6 +424,13 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "cancel",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

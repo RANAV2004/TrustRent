@@ -10,6 +10,30 @@ import {
 } from "@/lib/listings";
 import { useStore } from "@/lib/local-store";
 import { apiReady } from "@/lib/sync";
+import { apiMode } from "@/lib/api";
+import { saveSearch } from "@/lib/searches";
+function SaveSearch({ q, filters }: { q: string; filters: Filters }) {
+  const [state, setState] = useState<"idle" | "saving" | "saved" | string>("idle");
+  if (!apiMode) return null;
+  async function save() {
+    setState("saving");
+    try {
+      await saveSearch(q, { ...filters, q });
+      setState("saved");
+    } catch (e) {
+      setState(e instanceof Error ? e.message : "Could not save.");
+    }
+  }
+  if (state === "saved") return <span className="text-sm text-vault" role="status">Saved. We&apos;ll email you new matches.</span>;
+  return (
+    <span className="flex items-center gap-2">
+      <button type="button" disabled={state === "saving"} onClick={save} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm hover:border-ink/40">
+        Save search &amp; alert me
+      </button>
+      {state !== "idle" && state !== "saving" && <span role="alert" className="text-xs text-claim">{state}</span>}
+    </span>
+  );
+}
 function Hero({ name }: { name?: string }) {
   return (
     <section className="relative isolate flex min-h-[calc(100dvh-16rem)] flex-col justify-center overflow-hidden rounded-3xl border border-line bg-mist px-5 py-14 sm:px-10 lg:px-16">
@@ -163,7 +187,8 @@ function Results() {
                   <><strong className="text-base">{shown.length}</strong> home{shown.length === 1 ? "" : "s"} in {match.label}{nFilters ? ` · ${nFilters} filter${nFilters > 1 ? "s" : ""}` : ""}</>
                 )}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {match.kind !== "none" && <SaveSearch key={q} q={q} filters={filters} />}
                 <button type="button" onClick={() => setShowFilters((s) => !s)} className="rounded-lg border border-line bg-surface px-3 py-2 text-sm lg:hidden">
                   {showFilters ? "Hide filters" : `Filters${nFilters ? ` (${nFilters})` : ""}`}
                 </button>

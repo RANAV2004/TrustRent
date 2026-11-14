@@ -75,7 +75,8 @@ export function ProfileForm({ // profile form
         error={errors.username}
         hint="3 to 20 lowercase letters, numbers or underscores."
       />
-      <TextField id="email" label="Email" type="email" autoComplete="email" value={v.email} readOnly={lockEmail} onChange={(e) => set("email")(e.target.value)} error={errors.email} />
+      <TextField id="email" label="Email" type="email" autoComplete="email" value={v.email} readOnly={lockEmail} onChange={(e) => set("email")(e.target.value)} error={errors.email}
+        hint={lockEmail ? "Your email is fixed once the account is created." : undefined} />
       <PhoneField value={v.phone} onChange={set("phone")} error={errors.phone} />
       <CountrySelect value={v.country} onChange={set("country")} error={errors.country} />
       {withPassword && (

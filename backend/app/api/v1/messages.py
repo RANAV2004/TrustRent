@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.accounts import field_error
 from app.api.v1.auth import get_current_user
@@ -12,7 +12,9 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal, get_db
 from app.models.marketplace import Conversation, Listing, Message, utcnow
 from app.models.user import User
+from app.core.ratelimit import enforce
 from app.services.accounts import display_name
+from app.services.notify import notify
 from app.services.marketplace import can_contact, conversation_out, message_out
 router = APIRouter(tags=["Messages"])
 DEMO_REPLY_DELAY_SECONDS = 1.5
@@ -25,11 +27,15 @@ class MessageIn(BaseModel):
 class VisitResponseIn(BaseModel):
     accept: bool
     slot: str | None = None
-def _parse_slot(s: str) -> datetime:
+MAX_PENDING_VISITS = 2
+
+
+def _parse_slot(s: str) -> datetime:  # always timezone-aware (no offset given = IST, as shown in the app)
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
-    except ValueError:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
         raise field_error("Visit times must be ISO dates.", "slots") from None
+    return dt if dt.tzinfo else dt.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
 async def _conversation_for(db: AsyncSession, cid: str, user: User) -> Conversation:
     c = await db.get(Conversation, cid)
     if not c or user.id not in (c.seeker_id, c.owner_id):
@@ -86,6 +92,7 @@ async def open_conversation(body: OpenIn, user: User = Depends(get_current_user)
 async def send_message(cid: str, body: MessageIn, background: BackgroundTasks,
                        user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _conversation_for(db, cid, user)
+    enforce(f"msg:user:{user.id}", 30, 60, "You're sending messages too fast. Wait a minute.")
     text = (body.text or "").strip() or None
     now = utcnow()
     if body.kind == "text":
@@ -97,16 +104,29 @@ async def send_message(cid: str, body: MessageIn, background: BackgroundTasks,
             raise field_error("Only the person looking for a home can request a visit.", None, status.HTTP_403_FORBIDDEN)
         if not body.slots:
             raise field_error("Pick at least one time.", "slots")
-        if any(_parse_slot(s).timestamp() < datetime.now(timezone.utc).timestamp() for s in body.slots):
+        if any(_parse_slot(s) < datetime.now(timezone.utc) for s in body.slots):
             raise field_error("Times must be in the future.", "slots")
+        pending = await db.scalar(select(func.count()).select_from(Message).where(
+            Message.conversation_id == c.id, Message.kind == "visit", Message.visit_status == "pending"))
+        if (pending or 0) >= MAX_PENDING_VISITS:
+            raise field_error("Wait for the owner to answer your earlier visit requests first.", "slots",
+                              status.HTTP_409_CONFLICT)
         m = Message(id=str(uuid.uuid4()), conversation_id=c.id, sender_id=user.id, kind="visit", text=text,
                     visit_slots=body.slots, visit_status="pending", created_at=now)
     else:
         raise field_error("Unknown message kind.", "kind")
+    other_read = c.owner_last_read if user.id == c.seeker_id else c.seeker_last_read
+    first_unread = other_read is None or c.updated_at is None or other_read >= c.updated_at  # they'd read everything
     db.add(m)
     _touch(c, user.id, now)
     await db.commit()
     owner = await db.get(User, c.owner_id)
+    if first_unread:  # one email per unread streak, not one per message
+        other = owner if user.id == c.seeker_id else await db.get(User, c.seeker_id)
+        listing = await db.get(Listing, c.listing_id)
+        what = "a visit request" if m.kind == "visit" else "a new message"
+        notify(other, f"{display_name(user)} sent you {what}",
+               [f"About {listing.title if listing else 'a home'}:", (text or "Visit request")[:300]], f"/messages?c={c.id}")
     if settings.DEMO_MODE and owner and owner.is_demo and user.id == c.seeker_id:
         background.add_task(demo_owner_reply, c.id, m.id)
     return message_out(m, display_name(user))
@@ -139,7 +159,10 @@ async def _respond(db: AsyncSession, c: Conversation, m: Message, owner: User, a
     db.add(reply)
     _touch(c, owner.id, now)
     await db.commit()
-    return m, display_name(await db.get(User, m.sender_id))
+    seeker = await db.get(User, m.sender_id)
+    if not owner.is_demo:
+        notify(seeker, "Visit confirmed" if accept else "Visit request declined", [reply.text], f"/messages?c={c.id}")
+    return m, display_name(seeker)
 @router.post("/conversations/{cid}/read")  # mark read
 async def mark_read(cid: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _conversation_for(db, cid, user)

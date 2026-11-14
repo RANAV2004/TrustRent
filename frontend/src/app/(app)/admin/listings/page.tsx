@@ -6,6 +6,7 @@ import { AdminListing, getAdminListings, relistListing, unlistListing } from "@/
 import { formatINR } from "@/lib/format";
 const STATUS: Record<AdminListing["status"], [string, "green" | "grey" | "red" | "amber"]> = {
   live: ["Live", "green"], paused: ["Paused by owner", "grey"], blocked: ["Unlisted by admin", "red"], removed: ["Removed", "grey"],
+  review: ["Address check", "amber"],
 };
 export default function AdminListingsPage() { // admin listings
   const [rows, setRows] = useState<AdminListing[] | null>(null);
@@ -43,7 +44,9 @@ export default function AdminListingsPage() { // admin listings
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{when(x.listedAt)}</td>
                   <td className="px-4 py-3">
-                    {x.status === "blocked"
+                    {x.status === "review"
+                      ? <ConfirmAction key="approve" label="Approve address" confirmLabel="Approve and go live" onConfirm={() => relistListing(x.id).then(replace)} />
+                      : x.status === "blocked"
                       ? <ConfirmAction key="relist" label="Relist" confirmLabel="Put back live" onConfirm={() => relistListing(x.id).then(replace)} />
                       : x.status === "removed" ? <span className="text-xs text-muted">NA</span>
                         : <ConfirmAction key="unlist" label="Unlist" confirmLabel="Unlist" danger reasonPlaceholder="Reason shown to the owner" onConfirm={(r) => unlistListing(x.id, r).then(replace)} />}

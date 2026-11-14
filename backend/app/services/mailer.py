@@ -29,6 +29,25 @@ def build_code_email(to: str, code: str, minutes: int) -> EmailMessage:
   <p style="color:#6b6b6b;font-size:13px">If you didn't sign up for TrustRent, you can ignore this email.</p>
 </div>""", subtype="html")
     return msg
+def build_email(to: str, subject: str, text: str, html: str | None = None) -> EmailMessage:
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = formataddr((settings.SMTP_FROM_NAME, settings.SMTP_FROM_EMAIL or settings.SMTP_USER))
+    msg["To"] = to
+    msg.set_content(text)
+    if html:
+        msg.add_alternative(html, subtype="html")
+    return msg
+
+
+async def send_email(to: str, subject: str, text: str, html: str | None = None) -> None:
+    try:
+        await asyncio.to_thread(_send, build_email(to, subject, text, html))
+    except (smtplib.SMTPException, OSError) as e:
+        log.error("Sending email to %s failed: %s", to, e)
+        raise EmailError("We couldn't send the email. Try again in a minute.") from e
+
+
 def _send(msg: EmailMessage) -> None:
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
         smtp.starttls(context=ssl.create_default_context())

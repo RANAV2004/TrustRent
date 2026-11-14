@@ -30,7 +30,7 @@ export async function openProtected(path: string, download?: string) {
 }
 export interface AdminOverview {
   users: { total: number; seekers: number; owners: number; verified: number; banned: number; deleted: number; premium: number };
-  listings: { live: number; paused: number; unlisted: number; removed: number };
+  listings: { live: number; paused: number; unlisted: number; removed: number; review?: number };
   deposits: { count: number; held: number; open: number; disputed: number; refunded: number };
   conversations: number; messages: number; premiumRevenue: number; pendingVerifications: number;
 }
@@ -42,7 +42,7 @@ export interface AdminUser {
 }
 export interface AdminListing {
   id: string; title: string; area: string; rent: number; deposit: number; bhk: number;
-  status: "live" | "paused" | "removed" | "blocked"; adminNote: string | null; listedAt: string; sample: boolean;
+  status: "live" | "paused" | "removed" | "blocked" | "review"; adminNote: string | null; listedAt: string; sample: boolean;
   conversations: number; owner: { id: string; name: string; email: string; banned: boolean };
 }
 export interface AdminConversation {

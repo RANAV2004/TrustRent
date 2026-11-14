@@ -10,6 +10,8 @@ from app.models.user import User
 from app.services.accounts import iso, is_admin
 from app.services.hash_service import HashService
 from app.services.files import private_storage
+from app.services.images import is_document, read_limited
+from app.services.notify import notify
 from app.services.register import try_rebuild_register
 router = APIRouter(tags=["Owner verification"])
 RELATIONS = {"owner", "co-owner", "authorised"}
@@ -35,11 +37,11 @@ def application_out(a: OwnerApplication) -> dict:
         "propertyFileHash": a.property_file_hash,
     }
 async def _read_doc(upload: UploadFile, field: str) -> bytes:
-    content = await upload.read()
+    content = await read_limited(upload, MAX_DOC_BYTES, field)
     if not content:
         raise field_error("Upload a photo or scan of the document.", field)
-    if len(content) > MAX_DOC_BYTES:
-        raise field_error("The file is larger than 10 MB.", field)
+    if not is_document(content):
+        raise field_error("Upload a PDF or a JPG, PNG or WebP photo of the document.", field)
     return content
 @router.get("/owner/application")  # owner verify
 async def get_application(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -101,5 +103,11 @@ async def review_application(user_id: str, body: ReviewIn, user: User = Depends(
     app.review_note = None if body.approve else (body.note or "The property document was unclear. Upload a sharper photo of every page.")
     await db.commit()
     await db.refresh(app)
+    if user.id != user_id:
+        owner = await db.get(User, user_id)
+        notify(owner, "Owner verification " + ("approved" if body.approve else "needs another look"),
+               ["You're verified as an owner. You can now list your home."] if body.approve
+               else [f"We couldn't approve your owner verification: {app.review_note}", "Upload the documents again."],
+               "/owner" if body.approve else "/owner/verify")
     await try_rebuild_register(db)
     return {"application": application_out(app)}

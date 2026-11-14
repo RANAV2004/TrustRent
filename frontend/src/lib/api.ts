@@ -1,6 +1,10 @@
 "use client";
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-export const apiMode = API_URL !== "";
+// Browser-only demo (fake accounts in localStorage) is never switched on silently in a production build.
+export const browserDemo = API_URL === "" &&
+  (process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_BROWSER_DEMO === "true");
+export const apiMode = !browserDemo;
+export const misconfigured = apiMode && API_URL === "";
 const TOKEN_KEY = "trustrent-token";
 export class ApiError extends Error {
   constructor(message: string, public status: number, public field?: string) {
@@ -53,7 +57,9 @@ export async function api<T>(path: string, { method, json, form }: CallOptions =
       body: form ?? (json !== undefined ? JSON.stringify(json) : undefined),
     });
   } catch {
-    throw new ApiError(`Can't reach the TrustRent server at ${API_URL}. Is the backend running?`, 0);
+    throw new ApiError(misconfigured
+      ? "This site isn't connected to the TrustRent server (NEXT_PUBLIC_API_URL is not set)."
+      : `Can't reach the TrustRent server at ${API_URL}. Is the backend running?`, 0);
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));

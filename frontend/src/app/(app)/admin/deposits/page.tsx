@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 import { useCallback, useEffect, useState } from "react";
 import { Loading, PageHeader, Pill, Stat, when } from "@/components/admin-ui";
 import { DepositCard } from "@/components/deposit-card";
@@ -136,24 +137,25 @@ export default function AdminDepositsPage() { // admin deposits
   const [error, setError] = useState<string | null>(null);
   const reload = useCallback(() => {
     adminDeposits().then(setDeposits, (e) => setError(e.message));
-    getLedger().then(setLedger, (e) => setError(e.message));
+    getLedger().then(setLedger, () => setLedger(null)); // arbitrators can't see the full ledger
   }, []);
   useEffect(() => { reload(); }, [reload]);
   const [fresh, setFresh] = useState<string | null>(null);
   const added = (nd: Deposit) => {
     setDeposits((l) => [nd, ...(l ?? [])]);
     setFresh(nd.id);
-    getLedger().then(setLedger);
+    getLedger().then(setLedger, () => setLedger(null));
     setTimeout(() => document.getElementById(nd.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
   };
-  const update = (nd: Deposit) => { setDeposits((l) => l!.map((x) => (x.id === nd.id ? nd : x))); getLedger().then(setLedger); };
+  const update = (nd: Deposit) => { setDeposits((l) => l!.map((x) => (x.id === nd.id ? nd : x))); getLedger().then(setLedger, () => setLedger(null)); };
+  const { user } = useAuth();
   const held = deposits?.filter((d) => d.status !== "settled") ?? [];
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Deposits & receipts" intro="Every deposit gets a tamper-proof receipt. Settle disputes here; each decision is added to the chain as a new block.">
+      <PageHeader title="Deposits & receipts" intro="Every deposit gets a tamper-evident receipt. Settle disputes here; each decision is added to the chain as a new block.">
         <Link href="/deposits/lookup" className="rounded-lg border border-line bg-surface px-4 py-2 text-sm hover:border-ink/40">Look up a receipt</Link>
       </PageHeader>
-      <GenerateReceipt onDone={added} />
+      {user?.isAdmin && <GenerateReceipt onDone={added} />}
       <section aria-label="How it works" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {STEPS.map((s, i) => (
           <div key={s.t} className="flex flex-col gap-1 rounded-xl border border-line bg-surface p-4">
@@ -178,7 +180,10 @@ export default function AdminDepositsPage() { // admin deposits
               {deposits.map((d) => (
                 <div key={d.id} className="flex flex-col gap-2">
                   <DepositCard d={d} onChange={update} highlight={d.id === fresh} />
-                  {d.status !== "settled" && <SettleForm d={d} onDone={update} />}
+                  <Link href={`/admin/deposits/${d.id}`} className={`w-fit rounded-lg px-3 py-1.5 text-sm ${d.status === "disputed" ? "bg-claim text-white hover:opacity-90" : "border border-line bg-surface hover:border-ink/40"}`}>
+                    {d.status === "disputed" ? "Open dispute workspace" : "Open workspace"}
+                  </Link>
+                  {d.status !== "settled" && d.status !== "settling" && <SettleForm d={d} onDone={update} />}
                   {d.ownerPayout === "due" && (
                     <button type="button" onClick={() => markOwnerPaid(d.id).then(update, (e) => setError(e.message))}
                       className="w-fit rounded-lg border border-line bg-surface px-3 py-1.5 text-sm hover:border-ink/40">Mark {formatINR(d.deducted ?? 0)} paid to owner</button>

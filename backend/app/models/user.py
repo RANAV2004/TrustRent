@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, DateTime, Enum, Integer
 from app.core.database import Base
 class UserRole(str, enum.Enum):  # roles
     TENANT = "tenant"
@@ -29,3 +29,8 @@ class User(Base):  # user
     banned_at = Column(DateTime, nullable=True)
     ban_reason = Column(String(300), nullable=True)
     deleted_at = Column(DateTime, nullable=True)
+    token_version = Column(Integer, default=0)  # bump to sign out every session
+    totp_secret = Column(String(64), nullable=True)
+    totp_enabled = Column(Boolean, default=False)
+    totp_last_step = Column(Integer, nullable=True)
+    email_notifications = Column(Boolean, default=True)

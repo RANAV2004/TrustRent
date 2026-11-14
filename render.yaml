@@ -7,7 +7,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips '*'
-    healthCheckPath: /api/v1/health
+    healthCheckPath: /api/v1/health/ready
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.1
@@ -40,4 +40,20 @@ services:
       - key: SMTP_APP_PASSWORD
         sync: false
       - key: STORAGE_MASTER_KEY_HEX
+        sync: false
+      - key: ENABLE_LEGACY_API
+        value: "False"
+      - key: FRONTEND_URL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: REQUIRE_STAFF_MFA
+        value: "True"
+      - key: LOG_JSON
+        value: "True"
+      - key: SENTRY_DSN
         sync: false

@@ -21,7 +21,7 @@ function Deposits() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl sm:text-4xl">Deposits</h1>
-          <p className="text-muted">Every security deposit gets a tamper-proof receipt. At move-out it&apos;s settled against that receipt.</p>
+          <p className="text-muted">Every security deposit gets a tamper-evident receipt. At move-out it&apos;s settled against that receipt.</p>
         </div>
         <Link href="/deposits/lookup" className="rounded-lg border border-line px-4 py-2 text-sm hover:border-ink/40">Look up a deposit</Link>
       </div>

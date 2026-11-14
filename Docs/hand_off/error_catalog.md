@@ -13,3 +13,4 @@
 | `TR_ERR_009` | `Unauthorized` | **Access Denied** | Your account does not possess permission to execute this operation on this tenancy vault. |
 | `TR_ERR_010` | `InvalidState` | **Invalid Tenancy State** | This action cannot be performed in the current state of the tenancy lifecycle. |
 | `TR_ERR_011` | `AlreadyInitialized` | **Already Initialized** | This tenancy vault contract is already permanently configured. |
+| `TR_ERR_012` | `ArbitratorAlreadyAssigned` | **Arbitrator Already Assigned** | An approved arbitrator is already handling this dispute. Only the TrustRent admin can assign one, and only once. |

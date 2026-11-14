@@ -40,6 +40,7 @@ export default function AdminOverviewPage() { // admin overview
             <Stat label="Paused by owner" value={o.listings.paused} />
             <Stat label="Unlisted by admin" value={o.listings.unlisted} tone={o.listings.unlisted ? "warn" : undefined} />
             <Stat label="Removed" value={o.listings.removed} />
+            {!!o.listings.review && <Stat label="Address checks waiting" value={o.listings.review} tone="warn" />}
           </Group>
           <Group title="Deposits" href="/admin/deposits">
             <Stat label="Receipts" value={o.deposits.count} />

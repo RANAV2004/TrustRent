@@ -23,7 +23,7 @@ async def visit_confirmed(db: AsyncSession, listing_id: str, seeker_id: str) -> 
     return (await db.scalar(stmt)) is not None
 def media_url(base: str, path: str) -> str:
     return path if path.startswith(("http://", "https://", "data:")) else f"{base.rstrip('/')}/media/{path}"
-def listing_out(listing: Listing, owner: User | None, *, exact: bool, base_url: str) -> dict:
+def listing_out(listing: Listing, owner: User | None, *, exact: bool, base_url: str, record: dict | None = None) -> dict:
     reveal = exact or bool(listing.show_exact_location)
     owner_name = display_name(owner) if owner else "Owner"
     return {
@@ -57,9 +57,8 @@ def listing_out(listing: Listing, owner: User | None, *, exact: bool, base_url: 
         "landlord": {
             "name": owner_name,
             "verified": bool(owner and owner.is_verified),
-            "tenancies_completed": listing.tenancies_completed or 0,
-            "full_refunds": listing.full_refunds or 0,
-            "disputes_lost": listing.disputes_lost or 0,
+            **(record or {"tenancies_completed": listing.tenancies_completed or 0, "full_refunds": listing.full_refunds or 0,
+                          "disputes_lost": listing.disputes_lost or 0}),
         },
     }
 def conversation_out(c: Conversation, listing: Listing, seeker: User, owner: User) -> dict:

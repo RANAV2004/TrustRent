@@ -10,6 +10,8 @@ export interface LandlordRecord {
   tenancies_completed: number;
   full_refunds: number;
   disputes_lost: number;
+  avg_deduction_pct?: number | null; // average share of the deposit kept, from settled TrustRent deposits
+  computed?: boolean;
 }
 export interface Listing {
   id: string;
@@ -39,7 +41,7 @@ export interface Listing {
   description?: string;
   about_owner?: string;
   photos?: string[];
-  status?: "live" | "paused" | "blocked";
+  status?: "live" | "paused" | "blocked" | "review";
   admin_note?: string | null;
 }
 export const EARLY_ACCESS_HOURS = 48;

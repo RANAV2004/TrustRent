@@ -69,7 +69,7 @@ export default function OwnerDashboard() { // owner dashboard
   }
   const approved = status === "approved";
   const stats = [
-    { label: "Live listings", value: listings.filter((l) => l.status !== "paused").length },
+    { label: "Live listings", value: listings.filter((l) => l.status === "live").length },
     { label: "Conversations", value: convs.length },
     { label: "Unread", value: unread },
     { label: "Visit requests", value: pendingVisits },
@@ -121,8 +121,8 @@ export default function OwnerDashboard() { // owner dashboard
                   <ListingPhoto l={l} className="h-32 w-full sm:h-full" />
                   <div className="flex flex-col gap-2 p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${l.status === "blocked" ? "bg-claim-soft text-claim" : l.status === "paused" ? "bg-mist text-muted" : "bg-vault-soft text-vault"}`}>
-                        {l.status === "blocked" ? "Unlisted by TrustRent" : l.status === "paused" ? "Paused" : "Live"}
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${l.status === "blocked" ? "bg-claim-soft text-claim" : l.status === "paused" ? "bg-mist text-muted" : l.status === "review" ? "bg-amber-soft text-amber" : "bg-vault-soft text-vault"}`}>
+                        {l.status === "blocked" ? "Unlisted by TrustRent" : l.status === "paused" ? "Paused" : l.status === "review" ? "Address check pending" : "Live"}
                       </span>
                       {early > 0 && l.status === "live" && <span className="text-xs text-muted">Premium-only for {early}h more</span>}
                       <span className="text-xs text-muted">Ref {l.id}</span>
@@ -131,11 +131,14 @@ export default function OwnerDashboard() { // owner dashboard
                     <p className="text-sm text-muted">
                       {l.locality}, {l.city}, {formatINR(l.rent)}/month, {l.photos?.length ?? 0} photo{l.photos?.length === 1 ? "" : "s"}
                     </p>
+                    {l.status === "review" && (
+                      <p className="rounded-lg bg-amber-soft px-3 py-2 text-sm">{l.admin_note}</p>
+                    )}
                     {l.status === "blocked" && (
                       <p className="rounded-lg bg-claim-soft px-3 py-2 text-sm text-claim">Reason: {l.admin_note}. Contact TrustRent support to get it relisted.</p>
                     )}
                     <div className="mt-1 flex flex-wrap gap-2 text-sm">
-                      {l.status !== "blocked" && <button type="button" onClick={() => act(() => setListingStatus(l.id, l.status === "paused" ? "live" : "paused"))}
+                      {l.status !== "blocked" && l.status !== "review" && <button type="button" onClick={() => act(() => setListingStatus(l.id, l.status === "paused" ? "live" : "paused"))}
                         className="rounded-md border border-line px-3 py-1 hover:border-ink/40">
                         {l.status === "paused" ? "Make live" : "Pause"}
                       </button>}

@@ -26,7 +26,7 @@ Renting a home in India usually means paying a security deposit of two to ten mo
 TrustRent addresses this in three ways:
 
 - **Verified people.** Every renter and owner confirms their email at sign-up. Owners submit identity and property documents, which an admin reviews before any home goes live.
-- **Tamper-proof deposit receipts.** Each deposit and each settlement is recorded as a cryptographic fingerprint in a hash-chained ledger, and optionally on the Polygon blockchain. Anyone can later check that the amount and details have not been changed.
+- **Tamper-evident deposit receipts.** Each deposit and each settlement is recorded as a cryptographic fingerprint in a hash-chained ledger, and optionally on the Polygon blockchain. Anyone can later check that the amount and details have not been changed.
 - **A fair settlement process.** The owner proposes a deduction with a reason, the tenant accepts or disputes it, and disputed cases are settled by an admin. Every step is added to the receipt chain.
 
 # Screenshots
@@ -86,12 +86,18 @@ Screenshots are stored in `Docs/screenshots`.
 # For people looking for a home
 
 - Sign up with email verification (a six-digit code sent by email) or sign in with Google.
-- Search homes by city, area or pin code, with filters for rent, bedrooms, furnishing, facilities and preferred tenants.
+- Search homes by city, area or pin code, with filters for rent, bedrooms, furnishing, facilities and preferred tenants. The same filters, sorting and paging are available from the API (`GET /api/v1/listings`).
+- Save a search and get an email when a new matching home goes live.
+- Reset a forgotten password with an emailed link (valid 30 minutes, works once, signs out every other device).
 - View listing details, photos, the deposit amount and the owner's deposit track record.
 - Message owners and book visits. The exact address is shown only after a visit is confirmed.
 - Upload an identity document to become a verified user.
 - Pay the security deposit and receive a deposit receipt.
-- Accept or dispute a settlement proposed by the owner at move-out.
+- Accept or dispute a settlement proposed by the owner at move-out. Unanswered proposals are accepted automatically after `SETTLEMENT_RESPONSE_DAYS` (7 by default).
+- Record the move-out. If the owner proposes nothing within `MOVE_OUT_CLAIM_DAYS` (14 by default), the full deposit is refunded automatically.
+- Sign the rent agreement online by typing your name. TrustRent stores a fingerprint of the exact text and of each signature in the receipt chain.
+- Add statements and photos during a dispute.
+- Turn email notifications on or off on the Account page.
 - Look up any receipt by deposit ID or receipt hash.
 
 # For owners
@@ -101,6 +107,9 @@ Screenshots are stored in `Docs/screenshots`.
 - Pause, resume or delete listings.
 - Reply to messages and accept or decline visit requests.
 - Propose a deposit settlement with the deduction and the reason.
+- Draft the rent agreement (term, rent, notice, lock-in, maintenance, extra clauses). It locks once anyone signs.
+- A home at an address that isn't on the verified property document waits for an admin address check before it goes live.
+- The owner's track record (deposits settled, full refunds, disputes lost, average deduction) is computed from real settled deposits.
 
 # Premium
 
@@ -117,6 +126,9 @@ Screenshots are stored in `Docs/screenshots`.
 - Read conversations between renters and owners for safety checks and disputes.
 - View Premium members, plans and payments, and revoke Premium.
 - View all deposits and the full receipt chain, settle disputed deposits and mark owner payouts.
+- Dispute workspace: move-in and move-out photos side by side for each room, both parties' statements, their chat, a timeline and the decision form.
+- Arbitrators (role `arbitrator`) see only deposits and disputes, and can decide them.
+- Admins and arbitrators must use an authenticator app (two-step sign-in) after their password. If one loses their phone, run `python backend/scripts/reset_staff_mfa.py <email>` on the server.
 - Generate a deposit receipt for a deposit paid outside the app, for example by bank transfer, UPI or cheque.
 
 # How Deposit Receipts Work
@@ -124,7 +136,7 @@ Screenshots are stored in `Docs/screenshots`.
 1. **Payment.** The tenant pays the deposit through the payment gateway (Razorpay), or an admin records a deposit that was paid outside the app.
 2. **Fingerprint.** The deposit details (deposit ID, home, tenant, owner, amount, time and payment reference) are hashed with Keccak-256. Only this fingerprint is recorded. Names and personal data are never written to the chain.
 3. **Linked block.** The fingerprint is stored as a new block that also contains the hash of the previous block. Changing any earlier record breaks every link after it.
-4. **On-chain copy.** When the DepositRegistry contract is configured, the receipt is also written to the Polygon Amoy network.
+4. **On-chain copy.** When the DepositRegistry contract is configured, a background job also writes the receipt to the Polygon Amoy network, outside the user's request, and retries until it succeeds. Without the on-chain copy the ledger is tamper-evident to anyone who doesn't control the database, not tamper-proof: someone with database access could rewrite it and recompute every hash.
 5. **Verification.** The receipt lookup page recomputes the fingerprint from the stored details and compares it with the receipt. Any change shows as a mismatch.
 6. **Settlement.** At move-out, the agreed deduction and refund are recorded as a second block linked to the same deposit.
 
@@ -250,11 +262,17 @@ The backend reads `.env` from the project root or from the `backend` folder. The
 |---|---|
 | `DATABASE_URL` | SQLite by default. Paste a hosted PostgreSQL URL for production. |
 | `JWT_SECRET` | Secret used to sign login tokens. Use a long random value in production. |
-| `DEMO_MODE` | Enables demo checkout, automatic ID approval and the demo admin account. Set to `False` in production. |
+| `ENVIRONMENT` | Set to `production` on the live server. It then refuses to start with `DEMO_MODE` on, a weak `JWT_SECRET` or a missing storage key. |
+| `DEMO_MODE` | Off by default. Enables demo checkout, sign-in by Google email without Google, and automatic ID approval. Local development only. |
 | `SEED_SAMPLE_LISTINGS` | Loads the sample Indore homes, tenants and deposit receipts. |
 | `ADMIN_EMAILS` | Accounts with these emails can open the admin console. |
 | `SMTP_USER`, `SMTP_APP_PASSWORD` | Gmail address and app password used to send sign-up verification codes. Sign-up is paused without them. |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Live payments. Without them, payments use the demo checkout in demo mode. |
+| `RAZORPAY_WEBHOOK_SECRET` | Lets Razorpay confirm payments server to server (`/api/v1/payments/webhook`), so a closed browser tab never loses a paid deposit. |
+| `STORAGE_MASTER_KEY_HEX` | 64 hex characters that encrypt ID documents and photos. Required in production. |
+| `FRONTEND_URL` | Used for links in emails (password reset, notifications). |
+| `SETTLEMENT_RESPONSE_DAYS`, `MOVE_OUT_CLAIM_DAYS` | Deadlines after which deposits settle automatically. |
+| `SENTRY_DSN`, `LOG_JSON` | Optional error tracking and JSON logs. Every response carries an `X-Request-ID` to match logs. |
 | `STORAGE_PROVIDER` | `local` or `s3` for encrypted document storage. |
 | `DEPOSIT_REGISTRY_ADDRESS`, `CHAIN_SIGNER_PRIVATE_KEY` | Write deposit receipts to the Polygon contract. |
 

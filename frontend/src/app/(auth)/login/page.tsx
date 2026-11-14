@@ -5,11 +5,13 @@ import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import {
   AuthFrame, Divider, FormError, PasswordField, SecondaryLink, SubmitButton, TextField,
 } from "@/components/auth-ui";
-import { AuthError, authMode, User } from "@/lib/auth";
+import { AuthError, authMode, MfaChallenge, MfaRequiredError, User } from "@/lib/auth";
 import { GOOGLE_CLIENT_ID, GoogleButton } from "@/components/google-button";
 import { afterSignIn, useAuth } from "@/lib/auth-context";
 function LoginForm() {
-  const { user, ready, signIn, signInWithGoogle } = useAuth();
+  const { user, ready, signIn, signInWithGoogle, completeMfa } = useAuth();
+  const [mfa, setMfa] = useState<MfaChallenge | null>(null);
+  const [code, setCode] = useState("");
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next");
@@ -32,6 +34,11 @@ function LoginForm() {
       router.replace(afterSignIn(u, next));
     } catch (err) {
       signingIn.current = false;
+      if (err instanceof MfaRequiredError) {
+        setMfa(err.challenge);
+        setCode("");
+        return;
+      }
       setError(err instanceof AuthError ? err.message : "Could not sign you in. Try again.");
     } finally {
       setBusy(false);
@@ -44,6 +51,44 @@ function LoginForm() {
       return;
     }
     run(() => signIn(identifier, password));
+  }
+  if (mfa) {
+    return (
+      <AuthFrame title="Two-step sign-in" subtitle="Staff accounts need a code from an authenticator app.">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!/^\d{6}$/.test(code.trim())) {
+              setError("Enter the 6-digit code from your authenticator app.");
+              return;
+            }
+            run(() => completeMfa(mfa.mfaToken, code.trim()));
+          }}
+          className="flex flex-col gap-4"
+          noValidate
+        >
+          {!mfa.enrolled && mfa.secret && (
+            <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 text-sm">
+              <p className="font-medium">Set up your authenticator (first sign-in only)</p>
+              <ol className="list-decimal pl-5 text-muted">
+                <li>Open Google Authenticator, Microsoft Authenticator or a similar app.</li>
+                <li>Add an account with &ldquo;Enter a setup key&rdquo;, time-based.</li>
+                <li>Type this key, then enter the 6-digit code it shows below.</li>
+              </ol>
+              <code className="rounded-lg bg-mist px-3 py-2 font-mono text-base tracking-wider break-all select-all">{mfa.secret.replace(/(.{4})/g, "$1 ").trim()}</code>
+              {mfa.otpauthUrl && <a href={mfa.otpauthUrl} className="text-vault hover:underline">Open in an authenticator app on this device</a>}
+            </div>
+          )}
+          <TextField id="code" label="6-digit code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+            value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+          <FormError message={error} />
+          <SubmitButton busy={busy}>{busy ? "Checking..." : "Verify and sign in"}</SubmitButton>
+          <button type="button" onClick={() => { setMfa(null); setError(null); }} className="text-sm text-muted hover:text-ink">
+            Back to sign in
+          </button>
+        </form>
+      </AuthFrame>
+    );
   }
   return (
     <AuthFrame title="Sign in" subtitle="Welcome back to TrustRent.">

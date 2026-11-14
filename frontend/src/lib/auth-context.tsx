@@ -11,6 +11,9 @@ interface AuthContextValue {
   signIn: (identifier: string, password: string) => Promise<User>;
   signInWithGoogle: (email: string) => Promise<User>;
   requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
+  completeMfa: (mfaToken: string, code: string) => Promise<User>;
+  setEmailNotifications: (on: boolean) => Promise<User>;
   updateProfile: (input: ProfileInput) => Promise<User>;
   setAccountType: (type: AccountType) => Promise<User>;
   verifyIdentity: (docType: string, file?: File) => Promise<User>;
@@ -47,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn: (id, pw) => keep(authService.signIn(id, pw)),
       signInWithGoogle: (email) => keep(authService.signInWithGoogle(email)),
       requestPasswordReset: (e) => authService.requestPasswordReset(e),
+      resetPassword: (t, pw) => authService.resetPassword(t, pw),
+      completeMfa: (t, code) => keep(authService.completeMfa(t, code)),
+      setEmailNotifications: (on) => keep(authService.setEmailNotifications(on)),
       updateProfile: (i) => keep(authService.updateProfile(i)),
       setAccountType: (t) => keep(authService.setAccountType(t)),
       verifyIdentity: (d, f) => keep(authService.verifyIdentity(d, f)),
@@ -77,6 +83,7 @@ export function afterSignIn(u: User, next: string | null): string {
 }
 export function homeFor(u: User): string {
   if (u.isAdmin) return "/admin";
+  if (u.isArbitrator) return "/admin/deposits";
   return u.accountType === "owner" ? "/owner" : "/search";
 }
 export function RequireAuth({ children }: { children: ReactNode }) {

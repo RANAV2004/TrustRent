@@ -468,6 +468,28 @@ describe("TrustRent: Smart Contracts Comprehensive Test Suite", function () {
       expect(await mockINR.balanceOf(await vault.getAddress())).to.equal(0n);
     });
 
+    it("Should let only the admin assign an arbitrator, and only once", async function () {
+      await vault.connect(landlord).raiseClaim(ethers.parseEther("15000"), "QmDamageReport");
+      await expect(vault.connect(landlord).assignArbitrator(arbitrator.address))
+        .to.be.revertedWithCustomError(vault, "Unauthorized");
+      await expect(vault.connect(tenant).assignArbitrator(arbitrator.address))
+        .to.be.revertedWithCustomError(vault, "Unauthorized");
+      await vault.connect(owner).assignArbitrator(arbitrator.address);
+      await arbRegistry.addArbitrator(stranger.address);
+      await expect(vault.connect(owner).assignArbitrator(stranger.address))
+        .to.be.revertedWithCustomError(vault, "ArbitratorAlreadyAssigned");
+    });
+
+    it("Should allow re-assignment only after the arbitrator is removed, and block the removed one from deciding", async function () {
+      await vault.connect(landlord).raiseClaim(ethers.parseEther("15000"), "QmDamageReport");
+      await vault.connect(owner).assignArbitrator(arbitrator.address);
+      await arbRegistry.removeArbitrator(arbitrator.address);
+      await expect(vault.connect(arbitrator).decide(ethers.parseEther("10000"), DEPOSIT_AMOUNT - ethers.parseEther("10000")))
+        .to.be.revertedWithCustomError(vault, "Unauthorized");
+      await arbRegistry.addArbitrator(stranger.address);
+      await expect(vault.connect(owner).assignArbitrator(stranger.address)).to.emit(vault, "ArbitratorAssigned");
+    });
+
     it("Should reject decision where sum of payouts does not equal deposit amount (Invariant)", async function () {
       await vault.connect(landlord).raiseClaim(DEDUCTION_CAP, "QmReport");
       await vault.connect(owner).assignArbitrator(arbitrator.address);
@@ -509,6 +531,22 @@ describe("TrustRent: Smart Contracts Comprehensive Test Suite", function () {
 
       expect(await vault.state()).to.equal(5);
       expect(await mockINR.balanceOf(tenant.address) - tenantBalBefore).to.equal(DEPOSIT_AMOUNT);
+    });
+  });
+
+  describe("4b. Cancelling before the deposit is locked", function () {
+    it("Should let a party cancel in Drafted or Signed, but not after the deposit is locked", async function () {
+      const v1 = await createValidVault();
+      await expect(v1.connect(stranger).cancel()).to.be.revertedWithCustomError(v1, "Unauthorized");
+      await expect(v1.connect(tenant).cancel()).to.emit(v1, "TenancyCancelled").withArgs(tenant.address);
+      expect(await v1.state()).to.equal(6);
+
+      const v2 = await createValidVault();
+      await v2.connect(landlord).sign();
+      await v2.connect(tenant).sign();
+      await mockINR.connect(tenant).approve(await v2.getAddress(), DEPOSIT_AMOUNT);
+      await v2.connect(tenant).lockDeposit();
+      await expect(v2.connect(landlord).cancel()).to.be.revertedWithCustomError(v2, "InvalidState");
     });
   });
 

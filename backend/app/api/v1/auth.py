@@ -23,14 +23,14 @@ async def get_current_user(
     stmt = select(User).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
-    if not user:
+    if not user or int(payload.get("ver") or 0) != int(user.token_version or 0):  # signed out everywhere
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     if user.banned_at or user.deleted_at:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been suspended. Contact TrustRent support.")
     return user
 @router.post("/login", response_model=TokenResponse)  # wallet login
 async def login_or_register(request: UserLoginRequest, db: AsyncSession = Depends(get_db)):
-    if not settings.DEMO_MODE:  # demo wallet login only
+    if not (settings.DEMO_MODE and settings.ENABLE_LEGACY_API):  # demo wallet login only
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
     if is_admin(User(email=request.email)) or request.role == UserRole.ARBITRATOR:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Use the normal sign-in for this account")
@@ -59,7 +59,7 @@ async def login_or_register(request: UserLoginRequest, db: AsyncSession = Depend
         user.wallet_address = request.smart_account_address
         await db.commit()
         await db.refresh(user)
-    token = create_access_token(subject=user.id)
+    token = create_access_token(subject=user.id, version=user.token_version or 0)
     return TokenResponse(
         access_token=token,
         token_type="bearer",
