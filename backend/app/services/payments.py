@@ -31,3 +31,43 @@ async def refund(payment_id: str, amount_inr: int) -> dict:
     if res.status_code >= 400:
         raise PaymentError("The refund was refused by the payment gateway.")
     return res.json()
+
+
+
+def _first_id(body: dict) -> str | None:
+    items = body.get("items")
+    if isinstance(items, list) and items:
+        return items[0].get("id")
+    return body.get("id")
+
+
+async def transfer_from_payment(payment_id: str, account: str, amount_inr: int, notes: dict) -> str:
+    """Razorpay Route: send part of a captured payment to a linked account. Returns the transfer id."""
+    body = {"transfers": [{"account": account, "amount": amount_inr * 100, "currency": "INR", "notes": notes}]}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            res = await client.post(f"{API}/payments/{payment_id}/transfers", json=body, auth=_auth())
+    except httpx.HTTPError as e:
+        raise PaymentError("Could not reach the payment gateway for the owner payout.") from e
+    if res.status_code >= 400:
+        raise PaymentError("The payment gateway refused the owner payout.")
+    tid = _first_id(res.json())
+    if not tid:
+        raise PaymentError("The payment gateway didn't return a transfer id.")
+    return tid
+
+
+async def direct_transfer(account: str, amount_inr: int, notes: dict) -> str:
+    """Razorpay Route: send money from the TrustRent balance to a linked account (deposit deductions)."""
+    body = {"account": account, "amount": amount_inr * 100, "currency": "INR", "notes": notes}
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            res = await client.post(f"{API}/transfers", json=body, auth=_auth())
+    except httpx.HTTPError as e:
+        raise PaymentError("Could not reach the payment gateway for the owner payout.") from e
+    if res.status_code >= 400:
+        raise PaymentError("The payment gateway refused the owner payout.")
+    tid = _first_id(res.json())
+    if not tid:
+        raise PaymentError("The payment gateway didn't return a transfer id.")
+    return tid

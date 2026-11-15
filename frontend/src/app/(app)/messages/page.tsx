@@ -84,7 +84,11 @@ function Thread({ c }: { c: Conversation }) {
     <div className="flex h-full min-h-[560px] flex-col">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{other}</p>
+          <p className="truncate font-semibold">{other}
+            {isOwner && !!c.seekerRating?.count && c.seekerRating.avg != null && (
+              <span className="ml-2 text-xs font-normal text-muted">★ {c.seekerRating.avg} from {c.seekerRating.count} past owner{c.seekerRating.count > 1 ? "s" : ""}</span>
+            )}
+          </p>
           <p className="truncate text-sm text-muted">
             {isOwner ? "Interested in" : "Owner of"} <Link href={`/listings/${c.listingId}`} className="text-vault hover:underline">{c.listingTitle}</Link>, {c.listingArea}
           </p>

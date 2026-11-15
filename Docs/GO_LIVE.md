@@ -102,3 +102,11 @@ The Privacy Policy (`/privacy`) and Terms of Use (`/terms`) are written for Indi
 - Rate limits are kept in memory per API process. If you run more than one API instance, move them to Redis.
 - Optional: `SENTRY_DSN` for error tracking and `LOG_JSON=True` for structured logs. Render's health check uses `/api/v1/health/ready`, which also checks the database.
 - Frontend: a production build talks to the API in `NEXT_PUBLIC_API_URL`. It never falls back to the browser-only demo unless `NEXT_PUBLIC_BROWSER_DEMO=true`.
+
+## Escrow, payouts and integrations added in v1.5
+
+- **Legal first.** TrustRent holds deposits until settlement. Before taking real money, confirm with a lawyer how this fits the RBI Payment Aggregator rules for your setup. The usual route is to keep the money with the payment aggregator (Razorpay settles to you, Route sends the owner's share) or to use a bank or SEBI/RBI-regulated escrow partner. The code supports Razorpay Route; a dedicated escrow partner would replace `services/payouts.py`.
+- **Razorpay Route.** Enable Route on your Razorpay account and set `RAZORPAY_ROUTE_ENABLED=True`. When an owner adds bank details, create a linked account for them in the Razorpay Dashboard (Route, Linked Accounts; Razorpay runs KYC), then paste its `acc_...` id on Admin, Payouts. Add `transfer.processed` and `transfer.failed` to the Razorpay webhook events.
+- **DigiLocker.** Register as an Authorized Partner on API Setu, set `DIGILOCKER_CLIENT_ID`, `DIGILOCKER_CLIENT_SECRET` and `DIGILOCKER_REDIRECT_URI` (your site + `/identity/digilocker`). Check the authorize, token and e-Aadhaar URLs in `.env` against the current partner specification; they are configurable.
+- **Aadhaar eSign (Digio).** Set `ESIGN_PROVIDER=digio`, the Digio client id and secret, and `DIGIO_BASE_URL` (sandbox by default). Register `https://<api>/api/v1/agreements/esign/webhook` in the Digio dashboard. The webhook only triggers a status check; TrustRent asks Digio directly whether the document is signed. Test the full flow in Digio's sandbox before going live: field names in `services/esign.py` follow Digio's public API but were not verified against a live account.
+- **E-stamp.** Owners buy e-stamp paper (for example from SHCIL) and attach it to the agreement before signing. Stamp duty differs by state.

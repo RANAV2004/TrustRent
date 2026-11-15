@@ -17,6 +17,9 @@ async def run_once() -> dict:
         out["anchored"] = await anchor_pending(db)
     async with AsyncSessionLocal() as db:
         out["alerts"] = await send_alerts(db)
+    from app.services.rent import send_reminders
+    async with AsyncSessionLocal() as db:
+        out["rentReminders"] = await send_reminders(db)
     return out
 
 

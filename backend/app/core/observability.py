@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from app.core.config import settings
 
 request_id: ContextVar[str] = ContextVar("request_id", default="-")
+client_ip: ContextVar[str | None] = ContextVar("client_ip", default=None)
 log = logging.getLogger("trustrent.http")
 
 
@@ -58,6 +59,7 @@ class GatewayMiddleware:  # ASGI: request id, body size cap, security headers, a
         headers = dict(scope.get("headers") or [])
         rid = headers.get(b"x-request-id", b"").decode()[:64] or uuid.uuid4().hex[:16]
         token = request_id.set(rid)
+        ip_token = client_ip.set((scope.get("client") or (None,))[0])
         limit = settings.MAX_REQUEST_MB * 1024 * 1024
         start, status_holder = time.perf_counter(), {"code": 500}
         try:
@@ -96,6 +98,7 @@ class GatewayMiddleware:  # ASGI: request id, body size cap, security headers, a
                          extra={"method": scope.get("method"), "path": path, "status": status_holder["code"],
                                 "ms": round((time.perf_counter() - start) * 1000, 1)})
             request_id.reset(token)
+            client_ip.reset(ip_token)
 
 
 class BodyTooLarge(Exception):

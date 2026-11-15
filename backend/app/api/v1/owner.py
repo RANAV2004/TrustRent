@@ -11,6 +11,7 @@ from app.services.accounts import iso, is_admin
 from app.services.hash_service import HashService
 from app.services.files import private_storage
 from app.services.images import is_document, read_limited
+from app.services.audit import audit
 from app.services.notify import notify
 from app.services.register import try_rebuild_register
 router = APIRouter(tags=["Owner verification"])
@@ -101,6 +102,8 @@ async def review_application(user_id: str, body: ReviewIn, user: User = Depends(
     app.status = "approved" if body.approve else "rejected"
     app.reviewed_at, app.reviewed_by = utcnow(), user.id
     app.review_note = None if body.approve else (body.note or "The property document was unclear. Upload a sharper photo of every page.")
+    audit(db, user, "owner.approved" if body.approve else "owner.rejected", "user", user_id, note=app.review_note,
+          demo_self_review=user.id == user_id or None)
     await db.commit()
     await db.refresh(app)
     if user.id != user_id:

@@ -15,6 +15,7 @@ from app.services.accounts import account_type, display_name, has_premium, is_ad
 from app.services.ledger import GENESIS, ledger_state
 from app.services.marketplace import message_out
 from app.services import chain
+from app.services.audit import audit
 from app.services.notify import notify
 from app.services.register import try_rebuild_register
 router = APIRouter(prefix="/admin", tags=["Admin console"])
@@ -90,12 +91,14 @@ async def ban(user_id: str, body: ReasonIn, admin: User = Depends(require_full_a
     u = await _target(db, user_id, admin)
     u.banned_at, u.ban_reason = utcnow(), body.reason.strip() or "Broke the TrustRent terms of use"
     u.token_version = (u.token_version or 0) + 1
+    audit(db, admin, "user.banned", "user", u.id, reason=u.ban_reason)
     await db.commit()
     return {"user": user_row(u)}
 @router.post("/users/{user_id}/unban")  # unban user
 async def unban(user_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     u.banned_at, u.ban_reason = None, None
+    audit(db, admin, "user.unbanned", "user", u.id)
     await db.commit()
     return {"user": user_row(u)}
 def _remove_local_file(path: str | None) -> None:
@@ -133,6 +136,7 @@ async def delete_user(user_id: str, admin: User = Depends(require_full_admin), d
     u.deleted_at, u.banned_at, u.ban_reason = now, now, "Account deleted by admin"
     u.token_version = (u.token_version or 0) + 1
     u.totp_secret, u.totp_enabled = None, False
+    audit(db, admin, "user.deleted", "user", u.id)
     await db.commit()
     await try_rebuild_register(db)
     return {"ok": True}
@@ -159,6 +163,7 @@ async def _listing(db: AsyncSession, listing_id: str) -> Listing:
 async def unlist(listing_id: str, body: ReasonIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     x = await _listing(db, listing_id)
     x.status, x.admin_note = "blocked", body.reason.strip() or "it breaks the TrustRent listing rules"
+    audit(db, admin, "listing.unlisted", "listing", x.id, reason=x.admin_note)
     await db.commit()
     return listing_row(x, await db.get(User, x.owner_id), 0)
 @router.post("/listings/{listing_id}/relist")  # relist home
@@ -168,6 +173,7 @@ async def relist(listing_id: str, admin: User = Depends(require_admin), db: Asyn
     x.status, x.admin_note = "live", None
     if was_review:
         x.listed_at = utcnow()  # goes live now: early access and search alerts start from here
+    audit(db, admin, "listing.address_approved" if was_review else "listing.relisted", "listing", x.id)
     await db.commit()
     notify(await db.get(User, x.owner_id), f"{x.title} is live", ["TrustRent approved your home. Seekers can find it now."],
            f"/listings/{x.id}")
@@ -202,6 +208,8 @@ async def conversation_messages(cid: str, admin: User = Depends(require_admin), 
     if not c:
         raise HTTPException(status_code=404, detail="Conversation not found")
     rows = list(await db.scalars(select(Message).where(Message.conversation_id == cid).order_by(Message.created_at)))
+    audit(db, admin, "chat.read", "conversation", cid)
+    await db.commit()
     people = {u.id: u for u in await db.scalars(select(User).where(User.id.in_({c.seeker_id, c.owner_id})))}
     return [message_out(m, display_name(people[m.sender_id]) if m.sender_id in people else "") | {
         "from": "seeker" if m.sender_id == c.seeker_id else "owner"} for m in rows]
@@ -229,6 +237,7 @@ async def revoke_premium(user_id: str, admin: User = Depends(require_full_admin)
     if not has_premium(u):
         raise field_error("This account doesn't have active Premium.", None, status.HTTP_409_CONFLICT)
     u.premium_until = utcnow()
+    audit(db, admin, "premium.revoked", "user", u.id)
     await db.commit()
     return {"user": user_row(u)}
 @router.get("/ledger")  # ledger

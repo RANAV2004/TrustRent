@@ -13,6 +13,7 @@ from app.models.marketplace import Listing, utcnow
 from app.models.user import User
 from app.services.accounts import display_name, iso, is_admin, is_reviewer
 from app.services.ledger import ledger_state, record_deposit, verify
+from app.services.audit import audit
 from app.services.notify import notify
 from app.services.settlement import claim_by, respond_by, settle
 router = APIRouter(tags=["Deposits"])
@@ -192,6 +193,7 @@ async def record_offline_deposit(body: RecordIn, admin: User = Depends(require_a
     db.add(d)
     await db.flush()
     await record_deposit(db, d)
+    audit(db, admin, "deposit.recorded_offline", "deposit", d.id, amount=d.amount, tenant=tenant.id, transaction=ref)
     await db.commit()
     return await deposit_out(db, d, admin, with_check=True)
 @router.get("/admin/deposits")  # admin deposits
@@ -205,5 +207,6 @@ async def owner_paid(deposit_id: str, admin: User = Depends(require_admin), db: 
     if d.owner_payout != "due":
         raise field_error("Nothing is due to the owner.", None, status.HTTP_409_CONFLICT)
     d.owner_payout = "paid"
+    audit(db, admin, "payout.marked_paid", "deposit", d.id, amount=d.deducted)
     await db.commit()
     return await deposit_out(db, d, admin, with_check=True)

@@ -15,7 +15,8 @@ from app.core.database import get_db
 from app.models.deposits import Deposit, Payment
 from app.models.marketplace import Listing, utcnow
 from app.models.user import User
-from app.services import chain, payments
+from app.services import chain, digilocker, esign, payments
+from app.services.payouts import route_enabled
 from app.services.accounts import display_name, has_premium, user_out
 from app.services.ledger import record_deposit
 from app.services.marketplace import visit_confirmed
@@ -26,6 +27,7 @@ class OrderIn(BaseModel):
     purpose: str
     planId: str | None = None
     listingId: str | None = None
+    invoiceId: str | None = None
 class VerifyIn(BaseModel):
     orderId: str
     paymentId: str | None = None
@@ -39,6 +41,9 @@ async def public_config():
         "emailCodes": "smtp" if email_enabled() else ("demo" if settings.DEMO_MODE else "off"),
         "depositNetwork": chain.network_name() if chain.enabled() else "trustrent-ledger",
         "explorerTxUrl": settings.CHAIN_EXPLORER_TX_URL if chain.enabled() else None,
+        "digilocker": digilocker.enabled(),
+        "aadhaarEsign": esign.enabled(),
+        "routePayouts": route_enabled(),
     }
 async def _deposit_listing(db: AsyncSession, user: User, listing_id: str | None) -> Listing:
     listing = await db.get(Listing, listing_id or "")
@@ -56,9 +61,18 @@ async def _deposit_listing(db: AsyncSession, user: User, listing_id: str | None)
     return listing
 @router.post("/payments/order")  # payment order
 async def create_order(body: OrderIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    if not user.is_verified:
+    if not user.is_verified and body.purpose != "rent":
         raise field_error("Verify your identity first (Premium page, step 1).", None, status.HTTP_403_FORBIDDEN)
-    if body.purpose == "premium":
+    if body.purpose == "rent":
+        from app.models.trust import RentInvoice
+        inv = await db.get(RentInvoice, body.invoiceId or "")
+        dep = await db.get(Deposit, inv.deposit_id) if inv else None
+        if not inv or not dep or dep.tenant_id != user.id:
+            raise HTTPException(status_code=404, detail="Rent invoice not found")
+        if inv.status != "due":
+            raise field_error("This month is already paid.", None, status.HTTP_409_CONFLICT)
+        ref, amount, description = inv.id, inv.amount, f"Rent for {inv.period} ({dep.id})"
+    elif body.purpose == "premium":
         if body.planId not in PLANS:
             raise field_error("Unknown plan.", "planId")
         ref, amount, description = body.planId, PLANS[body.planId][1], f"TrustRent Premium for {PLANS[body.planId][0]} days"
@@ -104,6 +118,12 @@ async def complete_payment(db: AsyncSession, pay: Payment, payment_ref: str) -> 
     if problem:  # money taken but no deposit created: flag it for refund
         pay.status = "refund_due" if pay.provider == "razorpay" else "cancelled"
     await db.commit()
+    if not problem and pay.purpose == "rent":
+        from app.models.trust import RentInvoice
+        from app.services.rent import pay_out
+        inv = await db.get(RentInvoice, pay.ref)
+        if inv:
+            await pay_out(db, inv)  # Razorpay Route: straight to the owner's linked account
     return problem
 
 
@@ -147,6 +167,8 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         event = json.loads(raw)
     except ValueError:
         raise HTTPException(status_code=400, detail="Bad body") from None
+    if event.get("event") in ("transfer.processed", "transfer.failed"):
+        return await _transfer_event(db, event)
     if event.get("event") not in ("payment.captured", "order.paid"):
         return {"ok": True, "ignored": event.get("event")}
     entity = ((event.get("payload") or {}).get("payment") or {}).get("entity") or {}
@@ -164,9 +186,33 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
     return {"ok": True, "status": pay.status}
 
 
+async def _transfer_event(db: AsyncSession, event: dict) -> dict:
+    from app.models.trust import RentInvoice
+    t = ((event.get("payload") or {}).get("transfer") or {}).get("entity") or {}
+    tid, ok = t.get("id"), event.get("event") == "transfer.processed"
+    if not tid:
+        return {"ok": True, "unknown": True}
+    dep = await db.scalar(select(Deposit).where(Deposit.payout_ref == tid))
+    inv = await db.scalar(select(RentInvoice).where(RentInvoice.payout_ref == tid))
+    if dep:
+        dep.owner_payout = "paid" if ok else "due"
+    if inv:
+        inv.payout_status = "paid" if ok else "due"
+    await db.commit()
+    return {"ok": True, "matched": bool(dep or inv)}
+
+
 async def _fulfil(db: AsyncSession, pay: Payment, user: User | None) -> str | None:
     if user is None or user.deleted_at or user.banned_at:
         return "This account can't receive the payment. It will be refunded."
+    if pay.purpose == "rent":
+        from app.models.trust import RentInvoice
+        from app.services.rent import mark_paid
+        inv = await db.get(RentInvoice, pay.ref)
+        if not inv or inv.status != "due":
+            return "This month's rent is already paid. This payment will be refunded."
+        await mark_paid(db, inv, "online", payment=pay, reference=pay.payment_id)
+        return None
     if pay.purpose == "premium":
         days = PLANS[pay.ref][0]
         start = user.premium_until if has_premium(user) else utcnow()

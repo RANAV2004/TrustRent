@@ -32,7 +32,7 @@ class Deposit(Base):  # deposit
     settled_at = Column(DateTime, nullable=True)
     settled_by = Column(String(36), nullable=True)
     refund_ref = Column(String(64), nullable=True)
-    owner_payout = Column(String(12), nullable=True)
+    owner_payout = Column(String(12), nullable=True)  # due | transferred | paid
     record_hash = Column(String(66), nullable=True)
     record_tx = Column(String(66), nullable=True)
     settle_hash = Column(String(66), nullable=True)
@@ -42,6 +42,7 @@ class Deposit(Base):  # deposit
     moved_out_by = Column(String(36), nullable=True)
     proposed_deducted = Column(Integer, nullable=True)  # owner's ask, kept when a dispute is decided
     disputed_at = Column(DateTime, nullable=True)
+    payout_ref = Column(String(40), nullable=True)  # Razorpay Route transfer for the owner's share
 class LedgerEntry(Base):  # ledger block
     __tablename__ = "ledger_entries"
     __table_args__ = (Index("ux_ledger_prev_hash", "prev_hash", unique=True),)  # one child per block: no forks

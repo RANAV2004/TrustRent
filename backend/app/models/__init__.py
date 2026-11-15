@@ -5,10 +5,12 @@ from app.models.evidence import Evidence, EvidenceType
 from app.models.marketplace import Conversation, EmailVerification, IdentitySubmission, Listing, Message, OwnerApplication
 from app.models.deposits import ConditionPhoto, Deposit, LedgerEntry, Payment
 from app.models.extras import Agreement, AgreementSignature, DisputeNote, PasswordReset, SavedSearch
+from app.models.trust import AuditLog, ChecklistMark, DigilockerSession, ListingReport, PayoutAccount, RentInvoice, Review
 __all__ = [
     "Base", "User", "UserRole", "Tenancy", "TenancyStateEnum", "Evidence", "EvidenceType",
     "Listing", "OwnerApplication", "EmailVerification", "IdentitySubmission", "Deposit", "LedgerEntry", "Payment", "ConditionPhoto", "Conversation", "Message",
-    "Agreement", "AgreementSignature", "DisputeNote", "PasswordReset", "SavedSearch",
+    "Agreement", "AgreementSignature", "AuditLog", "ChecklistMark", "DigilockerSession", "ListingReport",
+    "PayoutAccount", "RentInvoice", "Review", "DisputeNote", "PasswordReset", "SavedSearch",
 ]
 for _table in Base.metadata.tables.values():  # checked at commit
     for _fk in _table.foreign_key_constraints:

@@ -32,7 +32,7 @@ export interface Deposit {
   role: "tenant" | "owner" | "admin" | null;
   tenant?: { id: string; name: string };
   owner?: { id: string; name: string };
-  ownerPayout?: "due" | "paid" | null;
+  ownerPayout?: "due" | "transferred" | "paid" | null;
   refundRef?: string | null;
   payment?: { provider: string; reference: string | null };
   verification?: { ledgerIntact: boolean; detailsMatch: boolean; verified: boolean; onChain: boolean };
@@ -65,7 +65,10 @@ export interface AgreementView {
     id: string; terms: AgreementTerms; text: string; textHash: string; createdAt: string;
     status: "draft" | "partly_signed" | "signed"; verified: boolean;
     signatures: { role: "tenant" | "owner"; typedName: string; signedAt: string; textHash: string; receipt: string | null }[];
+    estamp: { state: string; number: string; amount: number; fileHash: string } | null;
+    esign: { status: "requested" | "completed" | "failed"; signedAt: string | null; pdfHash: string | null; links: string | null } | null;
   };
+  esignAvailable?: boolean;
   canCreate: boolean;
   canSign?: boolean;
   signAs?: string | null;
@@ -87,6 +90,7 @@ export interface Workspace {
   timeline: { at: string; kind: string; text: string }[];
   ledger: { seq: number; kind: string; hash: string; at: string }[];
   canDecide: boolean;
+  checklist?: Record<"move_in" | "move_out", Record<"tenant" | "owner", { done: string[]; missing: string[]; completedAt: string | null }>>;
 }
 export const getWorkspace = (id: string) => api<Workspace>(`/admin/deposits/${id}/workspace`);
 export const adminDeposits = () => api<Deposit[]>("/admin/deposits");
@@ -109,7 +113,7 @@ export interface PaymentResult {
   payment: { id: string; status: string; purpose: string };
   depositId?: string | null;
 }
-export const createOrder = (body: { purpose: "premium"; planId: string } | { purpose: "deposit"; listingId: string }) =>
+export const createOrder = (body: { purpose: "premium"; planId: string } | { purpose: "deposit"; listingId: string } | { purpose: "rent"; invoiceId: string }) =>
   api<Order>("/payments/order", { json: body });
 export const verifyPayment = (orderId: string, paymentId?: string, signature?: string) =>
   api<PaymentResult>("/payments/verify", { json: { orderId, paymentId, signature } });

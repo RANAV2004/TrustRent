@@ -10,6 +10,7 @@ from app.models.marketplace import utcnow
 from app.models.user import User
 from app.services import payments
 from app.services.ledger import record_settlement
+from app.services.audit import audit
 from app.services.notify import notify
 
 log = logging.getLogger(__name__)
@@ -64,8 +65,20 @@ async def _finish(db: AsyncSession, d: Deposit, by_id: str) -> Deposit:
     d.owner_payout = "due" if d.deducted else None
     d.settled_at, d.settled_by, d.status = utcnow(), by_id, "settled"
     await record_settlement(db, d)
+    from app.services.rent import end_tenancy
+    await end_tenancy(db, d)
+    if by_id not in (d.tenant_id, d.owner_id):  # staff decision or automatic deadline
+        actor = None if by_id == SYSTEM else await db.get(User, by_id)
+        audit(db, actor, "deposit.auto_settled" if by_id == SYSTEM else "deposit.settled", "deposit", d.id,
+              deducted=d.deducted, refunded=d.refunded, reason=d.deduction_reason)
     await db.commit()
     await db.refresh(d)
+    if d.deducted:  # owner's share: Razorpay Route when set up, else the admin payout desk
+        from app.services.payouts import pay_owner
+        state, tid = await pay_owner(db, d.owner_id, d.deducted, {"deposit": d.id})
+        if state == "transferred":
+            d.owner_payout, d.payout_ref = "transferred", tid
+            await db.commit()
     tenant, owner = await db.get(User, d.tenant_id), await db.get(User, d.owner_id)
     msg = [f"Deposit {d.id} is settled: ₹{d.refunded:,} refunded to the tenant and ₹{d.deducted:,} to the owner."]
     if by_id == SYSTEM:

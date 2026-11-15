@@ -11,6 +11,7 @@ from app.core.observability import GatewayMiddleware, setup_logging
 from app.api.v1 import health, auth, identity, tenancies, evidence, arbitrator
 from app.api.v1 import accounts, listings, owner, messages, admin, admin_console, payments, deposits, condition
 from app.api.v1 import agreements, disputes, searches
+from app.api.v1 import checklist, digilocker, payouts, rent, reports, reviews
 from app.services.seed import remove_sample_data, seed_demo_admin, seed_demo_deposits, seed_sample_listings
 import app.models  # noqa: F401
 VERSION = "1.4.0"
@@ -68,7 +69,7 @@ app.add_middleware(
 )
 app.add_middleware(GatewayMiddleware)
 ROUTERS = [health, auth, accounts, listings, owner, messages, admin, admin_console, payments, deposits, condition,
-           agreements, disputes, searches]
+           agreements, disputes, searches, checklist, digilocker, payouts, rent, reports, reviews]
 if settings.ENABLE_LEGACY_API:  # old on-chain vault flow; off unless asked for
     ROUTERS += [identity, tenancies, evidence, arbitrator]
 for module in ROUTERS:

@@ -23,6 +23,7 @@ from app.services.accounts import (
     verify_secret,
 )
 from app.services.images import is_document, read_limited
+from app.services.audit import audit
 from app.services.notify import notify
 from app.services.hash_service import HashService
 from app.services.mailer import EmailError, email_enabled, send_code_email, send_email
@@ -238,6 +239,7 @@ async def verify_mfa(body: MfaIn, db: AsyncSession = Depends(get_db)):
                           status.HTTP_401_UNAUTHORIZED)
     first = not user.totp_enabled
     user.totp_enabled, user.totp_last_step = True, step
+    audit(db, user, "staff.mfa_enabled" if first else "staff.signed_in", "user", user.id)
     await db.commit()
     await db.refresh(user)
     if first:

@@ -98,6 +98,11 @@ Screenshots are stored in `Docs/screenshots`.
 - Sign the rent agreement online by typing your name. TrustRent stores a fingerprint of the exact text and of each signature in the receipt chain.
 - Add statements and photos during a dispute.
 - Turn email notifications on or off on the Account page.
+- Verify identity instantly with DigiLocker (Aadhaar). Only the name check and the last 4 digits are kept.
+- Pay monthly rent in the app once the agreement is signed, and download HRA-ready receipts (amount in words, landlord PAN) and a yearly statement. Reminders go out before the due date and when rent is overdue.
+- Follow a room-by-room move-in and move-out checklist; finishing it is recorded in the receipt chain.
+- Review the owner after the deposit is settled. Reviews stay hidden until both sides review, or the review window ends.
+- Report a suspicious home. Three reports from different people pause it until an admin checks.
 - Look up any receipt by deposit ID or receipt hash.
 
 # For owners
@@ -108,6 +113,11 @@ Screenshots are stored in `Docs/screenshots`.
 - Reply to messages and accept or decline visit requests.
 - Propose a deposit settlement with the deduction and the reason.
 - Draft the rent agreement (term, rent, notice, lock-in, maintenance, extra clauses). It locks once anyone signs.
+- Attach e-stamp paper (certificate number, state, duty and the certificate file); its details become part of the signed text.
+- Sign with Aadhaar eSign through Digio, as an alternative to typed-name signing. The signed PDF and its fingerprint are kept.
+- Add bank details and PAN (encrypted) for payouts. With Razorpay Route, rent goes straight to the owner and deposit deductions are transferred at settlement.
+- Record rent paid in cash, UPI or bank transfer, so the tenant still gets a receipt.
+- See a tenant's rating from past owners in Messages.
 - A home at an address that isn't on the verified property document waits for an admin address check before it goes live.
 - The owner's track record (deposits settled, full refunds, disputes lost, average deduction) is computed from real settled deposits.
 
@@ -128,6 +138,9 @@ Screenshots are stored in `Docs/screenshots`.
 - View all deposits and the full receipt chain, settle disputed deposits and mark owner payouts.
 - Dispute workspace: move-in and move-out photos side by side for each room, both parties' statements, their chat, a timeline and the decision form.
 - Arbitrators (role `arbitrator`) see only deposits and disputes, and can decide them.
+- Reports & reviews: act on reported homes (dismiss or unlist) and hide reviews that break the rules.
+- Payouts: approve owners' bank details, link their Razorpay Route account, see every payout still due and mark manual payouts.
+- Audit log: every admin, arbitrator and automatic action, with who, when, what and the IP address. Viewing an ID document, revealing bank details and reading a chat are logged too.
 - Admins and arbitrators must use an authenticator app (two-step sign-in) after their password. If one loses their phone, run `python backend/scripts/reset_staff_mfa.py <email>` on the server.
 - Generate a deposit receipt for a deposit paid outside the app, for example by bank transfer, UPI or cheque.
 

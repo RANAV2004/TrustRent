@@ -29,10 +29,17 @@ async def owner_stats(db: AsyncSession, owner_ids: set[str]) -> dict[str, dict]:
     return out
 
 
+async def with_ratings(db: AsyncSession, stats: dict[str, dict]) -> dict[str, dict]:
+    from app.services.reviews import rating_summary
+    for oid, r in (await rating_summary(db, set(stats))).items():
+        stats[oid]["rating"], stats[oid]["reviews"] = r["avg"], r["count"]
+    return stats
+
+
 def record_for(listing: Listing, stats: dict | None) -> dict:
     """Sample homes keep their illustrative numbers; real owners get computed ones."""
     if listing.listed_days_ago is not None or stats is None:
         return {"tenancies_completed": listing.tenancies_completed or 0, "full_refunds": listing.full_refunds or 0,
                 "disputes_lost": listing.disputes_lost or 0, "avg_deduction_pct": None, "computed": False}
     return {**{k: stats[k] for k in ("tenancies_completed", "full_refunds", "disputes_lost", "avg_deduction_pct")},
-            "computed": True}
+            "rating": stats.get("rating"), "reviews": stats.get("reviews", 0), "computed": True}

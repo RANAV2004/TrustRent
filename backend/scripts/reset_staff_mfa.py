@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sqlalchemy import func, select  # noqa: E402
 from app.core.database import AsyncSessionLocal  # noqa: E402
 from app.models.user import User  # noqa: E402
+from app.services.audit import audit  # noqa: E402
 
 
 async def main(email: str) -> int:
@@ -20,6 +21,7 @@ async def main(email: str) -> int:
             return 1
         user.totp_secret, user.totp_enabled, user.totp_last_step = None, False, None
         user.token_version = (user.token_version or 0) + 1
+        audit(db, None, "staff.mfa_reset", "user", user.id, via="reset_staff_mfa.py")
         await db.commit()
         print(f"Two-step sign-in reset for {email}. They set it up again at their next sign-in.")
         return 0

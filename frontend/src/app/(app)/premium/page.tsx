@@ -1,13 +1,15 @@
 "use client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { PremiumBadge } from "@/components/listing-ui";
 import { DemoCheckout, payWithRazorpay } from "@/components/checkout";
 import { apiMode } from "@/lib/api";
 import { createOrder, Order } from "@/lib/deposits";
 import { AuthError, isPremium } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
+import { serverConfig } from "@/lib/config";
+import { digilockerStart } from "@/lib/trust";
 import { formatINR } from "@/lib/format";
 import { allListings, EARLY_ACCESS_HOURS, earlyAccessHoursLeft } from "@/lib/listings";
 import { ID_DOCS } from "@/lib/owner";
@@ -137,6 +139,7 @@ function Premium() {
             <h2 className="text-xl">Verify your identity</h2>
             <p className="mt-1 text-sm text-muted">The badge means TrustRent has checked who you are, so we need one ID document. For Aadhaar, upload the masked version (first 8 digits hidden), which you can download from the UIDAI website.</p>
           </div>
+          <DigilockerButton />
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium">Document</span>
             <select value={docType} onChange={(e) => setDocType(e.target.value)} className="rounded-lg border border-line px-3 py-2.5">
@@ -195,6 +198,22 @@ function Premium() {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+function DigilockerButton() { // instant verification
+  const [on, setOn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { serverConfig().then((c) => setOn(!!c?.digilocker)); }, []);
+  if (!on) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-vault/30 bg-vault-soft/40 p-4 text-sm">
+      <p className="font-medium">Fastest: verify with DigiLocker</p>
+      <p className="text-muted">Sign in to DigiLocker and share your Aadhaar. You&apos;re verified straight away if the name matches your account. We keep only your name check and the last 4 Aadhaar digits.</p>
+      <button type="button" onClick={() => digilockerStart().then((r) => { window.location.href = r.url; }, (e) => setError(e.message))}
+        className="w-fit rounded-lg bg-vault px-4 py-2 font-medium text-white hover:bg-vault-deep">Continue with DigiLocker</button>
+      {error && <p role="alert" className="text-claim">{error}</p>}
+      <p className="text-xs text-muted">Or upload a document below.</p>
     </div>
   );
 }

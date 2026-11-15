@@ -97,7 +97,7 @@ function UploadForm({ depositId, set, onAdded }: { depositId: string; set: Condi
     </form>
   );
 }
-export function ConditionPhotos({ depositId }: { depositId: string }) { // room photos
+export function ConditionPhotos({ depositId, onAdded }: { depositId: string; onAdded?: () => void }) { // room photos
   const [open, setOpen] = useState(false);
   const [set, setSet] = useState<ConditionSet | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ export function ConditionPhotos({ depositId }: { depositId: string }) { // room 
                     ? "Photos from the tenant and the owner, room by room. Compare move-in with move-out before deciding a deduction."
                     : "Photograph each room at move-in and again at move-out. Only you and the TrustRent admin can see your photos. If there's a dispute, the admin compares them with the other side's photos."}
                 </p>
-                {canAdd && <UploadForm depositId={depositId} set={set} onAdded={(p) => setSet((s) => s && { ...s, photos: [...s.photos, p] })} />}
+                {canAdd && <UploadForm depositId={depositId} set={set} onAdded={(p) => { setSet((s) => s && { ...s, photos: [...s.photos, p] }); onAdded?.(); }} />}
                 {!rooms.length && <p className="text-sm text-muted">No photos yet.</p>}
                 {rooms.map((room) => (
                   <div key={room} className="flex flex-col gap-2">

@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models.marketplace import IdentitySubmission, OwnerApplication, utcnow
 from app.models.user import User
 from app.services.accounts import display_name, iso, is_admin, is_reviewer
+from app.services.audit import audit
 from app.services.notify import notify
 from app.services.files import read_private
 from app.services.register import rebuild_register, try_rebuild_register
@@ -65,13 +66,21 @@ async def owner_document(user_id: str, doc: str, admin: User = Depends(require_f
         raise HTTPException(status_code=404, detail="Not found")
     path, iv, name = ((app.id_file_path, app.id_file_iv, app.id_file_name) if doc == "id"
                       else (app.property_file_path, app.property_file_iv, app.property_file_name))
-    return _file_response(read_private(path, iv), name)
+    content = read_private(path, iv)
+    audit(db, admin, "document.viewed", "user", user_id, document=f"owner {doc}")
+    await db.commit()
+    return _file_response(content, name)
 @router.get("/identity/{submission_id}/file")  # id doc
 async def identity_document(submission_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
-    return _file_response(read_private(s.file_path, s.file_iv), s.file_name)
+    if not s.file_path:
+        raise HTTPException(status_code=404, detail="Verified through DigiLocker: no document file is stored.")
+    content = read_private(s.file_path, s.file_iv)
+    audit(db, admin, "document.viewed", "user", s.user_id, document=s.doc_type)
+    await db.commit()
+    return _file_response(content, s.file_name)
 @router.post("/identity/{submission_id}/review")  # id review
 async def review_identity(submission_id: str, body: DecisionIn, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
@@ -89,6 +98,8 @@ async def review_identity(submission_id: str, body: DecisionIn, admin: User = De
                 IdentitySubmission.user_id == user.id, IdentitySubmission.id != s.id,
                 IdentitySubmission.status == "approved").limit(1))
             user.is_verified = other is not None
+    audit(db, admin, "identity.approved" if body.approve else "identity.rejected", "user", s.user_id,
+          submission=s.id, note=s.review_note)
     await db.commit()
     await try_rebuild_register(db)
     notify(user, "ID " + ("verified" if body.approve else "needs another look"),
@@ -98,6 +109,8 @@ async def review_identity(submission_id: str, body: DecisionIn, admin: User = De
 @router.get("/verification-register.xlsx")  # excel register
 async def download_register(admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     path = await rebuild_register(db)
+    audit(db, admin, "register.downloaded")
+    await db.commit()
     return FileResponse(path, filename="TrustRent_verification_register.xlsx",
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         headers={"Cache-Control": "no-store"})

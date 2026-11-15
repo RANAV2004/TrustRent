@@ -122,6 +122,12 @@ export default function DisputeWorkspacePage({ params }: { params: Promise<{ id:
             <div className="hidden gap-3 text-xs font-medium text-muted md:grid md:grid-cols-[140px_minmax(0,1fr)_minmax(0,1fr)]">
               <span>Room</span><span>Move-in</span><span>Move-out</span>
             </div>
+            {ws.checklist && (
+              <p className="text-xs text-muted">
+                Checklist: {(["move_in", "move_out"] as const).map((st) => (["tenant", "owner"] as const).map((sd) =>
+                  `${sd} ${st === "move_in" ? "move-in" : "move-out"} ${ws.checklist![st][sd].completedAt ? "complete" : `${ws.checklist![st][sd].done.length} rooms`}`).join(", ")).join(" · ")}
+              </p>
+            )}
             {rooms.length ? rooms.map(([room, cell]) => <RoomRow key={room} depositId={d.id} room={room} cell={cell} />)
               : <p className="text-sm text-muted">Neither side uploaded condition photos.</p>}
           </section>

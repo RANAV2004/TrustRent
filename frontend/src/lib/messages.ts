@@ -11,6 +11,7 @@ export interface Conversation {
   listingArea: string;
   seekerId: string;
   seekerName: string;
+  seekerRating?: { avg: number | null; count: number }; // owners see the tenant's reviews from past tenancies
   ownerId: string;
   ownerName: string;
   createdAt: string;

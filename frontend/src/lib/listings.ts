@@ -12,6 +12,8 @@ export interface LandlordRecord {
   disputes_lost: number;
   avg_deduction_pct?: number | null; // average share of the deposit kept, from settled TrustRent deposits
   computed?: boolean;
+  rating?: number | null; // average stars from tenants, shown once there are reviews
+  reviews?: number;
 }
 export interface Listing {
   id: string;

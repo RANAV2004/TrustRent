@@ -9,7 +9,7 @@ const api = (() => {
   }
 })();
 
-// Only Google sign-in and Razorpay checkout may load outside code. Photos can come from the API or a public bucket.
+// Only Google sign-in and Razorpay checkout may load outside code; Google Maps may be framed for the location map. Photos can come from the API or a public bucket.
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://accounts.google.com https://checkout.razorpay.com`,
@@ -17,7 +17,7 @@ const csp = [
   `img-src 'self' blob: data: https: ${api}` + (isDev ? " http:" : ""),
   "font-src 'self' data:",
   `connect-src 'self' ${api} https://accounts.google.com https://api.razorpay.com https://lumberjack.razorpay.com${isDev ? " http://localhost:* ws://localhost:*" : ""}`,
-  "frame-src https://accounts.google.com https://api.razorpay.com https://checkout.razorpay.com",
+  "frame-src https://accounts.google.com https://api.razorpay.com https://checkout.razorpay.com https://maps.google.com https://www.google.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

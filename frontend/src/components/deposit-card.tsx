@@ -2,6 +2,9 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { AgreementPanel } from "@/components/agreement";
+import { ChecklistPanel } from "@/components/checklist-panel";
+import { RentPanel } from "@/components/rent-panel";
+import { ReviewPanel } from "@/components/review-panel";
 import { ConditionPhotos } from "@/components/condition-photos";
 import { DisputeNotes } from "@/components/dispute-notes";
 import { Deposit, markMovedOut, networkLabel, proposeSettlement, respondToSettlement, STATUS_LABEL } from "@/lib/deposits";
@@ -49,6 +52,7 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoTick, setPhotoTick] = useState(0);
   async function act(fn: () => Promise<Deposit>) {
     setBusy(true);
     setError(null);
@@ -90,7 +94,7 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
         )}
         {d.movedOutAt && <div><dt className="text-muted">Moved out</dt><dd>{date(d.movedOutAt)}</dd></div>}
         {d.settledAt && <div><dt className="text-muted">Settled on</dt><dd>{date(d.settledAt)}{d.autoSettled ? " (automatic)" : ""}</dd></div>}
-        {d.ownerPayout && <div><dt className="text-muted">Owner payout</dt><dd>{d.ownerPayout === "paid" ? "Paid" : "Due"}</dd></div>}
+        {d.ownerPayout && <div><dt className="text-muted">Owner payout</dt><dd>{d.ownerPayout === "paid" ? "Paid" : d.ownerPayout === "transferred" ? "Sent to bank" : "Due"}</dd></div>}
       </dl>
       {d.reason && <p className="rounded-lg bg-mist px-3 py-2 text-sm"><span className="font-medium">Reason for deduction:</span> {d.reason}</p>}
       {d.claimBy && (
@@ -111,7 +115,10 @@ export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; on
       </div>
       <VerifiedBadge d={d} />
       {d.role && d.role !== "admin" && <AgreementPanel d={d} />}
-      {d.role && <ConditionPhotos depositId={d.id} />}
+      {d.role && d.role !== "admin" && <RentPanel d={d} />}
+      {d.role && d.role !== "admin" && <ChecklistPanel depositId={d.id} refreshKey={photoTick} />}
+      {d.role && <ConditionPhotos depositId={d.id} onAdded={() => setPhotoTick((t) => t + 1)} />}
+      {d.role && d.role !== "admin" && <ReviewPanel d={d} />}
       {d.role && d.role !== "admin" && <DisputeNotes d={d} />}
       {(d.role === "tenant" || d.role === "owner") && d.status === "held" && !d.movedOutAt && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-mist p-4 text-sm">

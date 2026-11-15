@@ -13,7 +13,7 @@ from app.core.ratelimit import enforce
 from app.services.files import save_public
 from app.services.images import clean_image, read_limited
 from app.services.marketplace import listing_out, visit_confirmed
-from app.services.reputation import owner_stats, record_for
+from app.services.reputation import owner_stats, record_for, with_ratings
 from app.services.search import SORTS, Filters, matches, trust_score
 router = APIRouter(tags=["Listings"])
 FURNISHING = {"furnished", "semi-furnished", "unfurnished"}
@@ -93,7 +93,7 @@ async def list_listings(
     rows = list(await db.scalars(select(Listing).where(Listing.status == "live").order_by(Listing.listed_at.desc())))
     owners = await _owners(db, {r.owner_id for r in rows})
     rows = [r for r in rows if not (owners.get(r.owner_id) and owners[r.owner_id].banned_at)]
-    stats = await owner_stats(db, {r.owner_id for r in rows})
+    stats = await with_ratings(db, await owner_stats(db, {r.owner_id for r in rows}))
     records = {r.id: record_for(r, stats.get(r.owner_id)) for r in rows}
     rows = _sort([r for r in rows if matches(r, f, records[r.id]["tenancies_completed"])], sort, records)
     response.headers["X-Total-Count"] = str(len(rows))
@@ -114,7 +114,7 @@ async def get_listing(listing_id: str, request: Request, user: User = Depends(ge
     if owner and owner.banned_at and row.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Listing not found")
     exact = row.owner_id == user.id or await visit_confirmed(db, row.id, user.id)
-    stats = await owner_stats(db, {row.owner_id})
+    stats = await with_ratings(db, await owner_stats(db, {row.owner_id}))
     return listing_out(row, owner, exact=exact, base_url=str(request.base_url), record=record_for(row, stats.get(row.owner_id)))
 async def require_approved_owner(user: User, db: AsyncSession) -> OwnerApplication:
     app = await db.get(OwnerApplication, user.id)

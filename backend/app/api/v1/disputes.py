@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.admin import require_reviewer
 from app.api.v1.auth import get_current_user
 from app.api.v1.condition import ROOMS
+from app.api.v1.checklist import checklist_state
 from app.api.v1.deposits import deposit_out
 from app.core.database import get_db
 from app.core.errors import field_error
@@ -125,4 +126,5 @@ async def workspace(deposit_id: str, user: User = Depends(require_reviewer), db:
         "timeline": await _timeline(db, d, notes),
         "ledger": [{"seq": e.seq, "kind": e.kind, "hash": e.entry_hash, "at": iso(e.created_at)} for e in entries],
         "canDecide": d.status not in ("settled", "settling"),
+        "checklist": (await checklist_state(db, d))["stages"],
     }

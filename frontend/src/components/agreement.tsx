@@ -1,6 +1,47 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import { agreementDocumentUrl, AgreementTerms, AgreementView, Deposit, getAgreement, saveAgreement, signAgreement } from "@/lib/deposits";
+import { attachEstamp, ESTAMP_STATES, openDocument, refreshEsign, startEsign } from "@/lib/trust";
+
+function EstampForm({ d, onSaved }: { d: Deposit; onSaved: (v: AgreementView) => void }) { // attach e-stamp
+  const [state, setState] = useState("");
+  const [number, setNumber] = useState("");
+  const [amount, setAmount] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!state || !number || !amount || !file) return setError("Fill in every field and choose the certificate file.");
+    setBusy(true);
+    setError(null);
+    try {
+      onSaved(await attachEstamp(d.id, state, number, Number(amount), file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't attach the e-stamp.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const field = "rounded-lg border border-line bg-surface px-3 py-2";
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-2 rounded-lg bg-mist p-3 text-sm">
+      <p className="font-medium">Attach e-stamp paper</p>
+      <p className="text-xs text-muted">Buy the e-stamp for your state (for example from SHCIL) and attach the certificate before anyone signs. Its number becomes part of the signed text.</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <select value={state} onChange={(e) => setState(e.target.value)} aria-label="State" className={field}>
+          <option value="">State</option>
+          {ESTAMP_STATES.map((x) => <option key={x}>{x}</option>)}
+        </select>
+        <input value={number} onChange={(e) => setNumber(e.target.value.toUpperCase())} placeholder="Certificate no., e.g. IN-MP..." aria-label="Certificate number" className={field} />
+        <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))} placeholder="Stamp duty (₹)" aria-label="Stamp duty" className={field} />
+      </div>
+      <input type="file" accept="application/pdf,image/*" aria-label="E-stamp certificate" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      {error && <p role="alert" className="text-claim">{error}</p>}
+      <button type="submit" disabled={busy} className="w-fit rounded-lg border border-line bg-surface px-3 py-1.5 hover:border-ink/40 disabled:opacity-60">Attach e-stamp</button>
+    </form>
+  );
+}
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
 const STATUS = { draft: "Waiting for signatures", partly_signed: "Signed by one side", signed: "Signed by both" };
@@ -108,11 +149,37 @@ export function AgreementPanel({ d }: { d: Deposit }) { // rent agreement
           <p className={`text-xs ${a.verified ? "text-vault" : "text-claim"}`}>
             {a.verified ? "The text matches its fingerprint and every signature covers this exact text." : "Warning: the text no longer matches what was signed. Contact TrustRent."}
           </p>
+          {a.estamp && (
+            <p className="text-sm">E-stamp: <strong>{a.estamp.number}</strong>, {a.estamp.state}, ₹{a.estamp.amount.toLocaleString("en-IN")}{" "}
+              <button type="button" onClick={() => openDocument(`/deposits/${d.id}/agreement/estamp`).catch((e) => setError(e.message))} className="text-vault hover:underline">View certificate</button></p>
+          )}
+          {a.esign?.status === "requested" && (
+            <div className="flex flex-col gap-2 rounded-lg bg-amber-soft p-3 text-sm">
+              <p>Aadhaar eSign has started. Our eSign partner emailed each of you a signing link; you confirm with an OTP on your Aadhaar-linked mobile.</p>
+              <div className="flex flex-wrap gap-3">
+                {a.esign.links && <a href={a.esign.links} target="_blank" rel="noopener noreferrer" className="font-medium text-vault hover:underline">Open my signing link</a>}
+                <button type="button" onClick={() => refreshEsign(d.id).then(setView, (e) => setError(e.message))} className="text-vault hover:underline">Check signing status</button>
+              </div>
+            </div>
+          )}
+          {a.esign?.status === "completed" && (
+            <p className="rounded-lg bg-vault-soft px-3 py-2 text-sm text-vault">Signed by both with Aadhaar eSign{" "}
+              <button type="button" onClick={() => openDocument(`/deposits/${d.id}/agreement/esigned.pdf`).catch((e) => setError(e.message))} className="font-medium underline">Download signed PDF</button></p>
+          )}
+          {view.canCreate && !a.estamp && <EstampForm d={d} onSaved={setView} />}
+          {view.esignAvailable && (
+            <div className="flex flex-col gap-1 rounded-lg border border-vault/30 p-3 text-sm">
+              <p className="font-medium">Sign with Aadhaar (legally valid eSign)</p>
+              <p className="text-xs text-muted">Both of you sign through our eSign partner with an Aadhaar OTP. Use this instead of typed names when you want a signature recognised under the IT Act.</p>
+              <button type="button" onClick={() => startEsign(d.id).then(setView, (e) => setError(e.message))}
+                className="mt-1 w-fit rounded-lg bg-vault px-3 py-1.5 text-white hover:bg-vault-deep">Start Aadhaar eSign</button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={print} className="text-sm text-vault hover:underline">Open printable copy</button>
             {view.canCreate && <button type="button" onClick={() => setEditing(true)} className="text-sm text-vault hover:underline">Edit terms</button>}
           </div>
-          {view.canSign && (
+          {view.canSign && a.esign?.status !== "requested" && (
             <form onSubmit={sign} className="flex flex-col gap-2 rounded-lg bg-mist p-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-xs text-muted">Type your full name to sign: {view.signAs}</span>

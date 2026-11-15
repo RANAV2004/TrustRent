@@ -62,8 +62,11 @@ async def inbox(user: User = Depends(get_current_user), db: AsyncSession = Depen
     msgs = await db.scalars(
         select(Message).where(Message.conversation_id.in_([c.id for c in convs])).order_by(Message.created_at)
     )
+    from app.services.reviews import rating_summary
+    seekers = await rating_summary(db, {c.seeker_id for c in convs if c.owner_id == user.id})  # owners see tenant ratings
     return {
-        "conversations": [conversation_out(c, listings[c.listing_id], users[c.seeker_id], users[c.owner_id]) for c in convs],
+        "conversations": [conversation_out(c, listings[c.listing_id], users[c.seeker_id], users[c.owner_id])
+                          | ({"seekerRating": seekers[c.seeker_id]} if c.seeker_id in seekers else {}) for c in convs],
         "messages": [message_out(m, display_name(users[m.sender_id])) for m in msgs],
     }
 @router.post("/conversations")  # open chat

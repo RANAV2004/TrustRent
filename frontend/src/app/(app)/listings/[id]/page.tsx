@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { FormEvent, use, useState } from "react";
 import { EarlyAccessTag, ListingPhoto, SafeImg, VerifiedLandlord } from "@/components/listing-ui";
 import { PayDepositCard } from "@/components/pay-deposit";
+import { ReportListing } from "@/components/report-listing";
+import { Stars } from "@/components/review-panel";
 import { apiMode } from "@/lib/api";
 import { isPremium } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
@@ -161,12 +163,16 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               <VerifiedLandlord />
             </div>
             <p className={`mt-1 text-sm ${trust.tone === "good" ? "text-vault" : trust.tone === "warn" ? "text-amber" : "text-muted"}`}>{trust.text}</p>
+            {!!l.landlord.reviews && l.landlord.rating != null && (
+              <p className="flex items-center gap-2 text-sm"><Stars value={l.landlord.rating} /> {l.landlord.rating} from {l.landlord.reviews} tenant review{l.landlord.reviews > 1 ? "s" : ""}</p>
+            )}
             {l.landlord.disputes_lost > 0 && <p className="text-sm text-amber">Lost {l.landlord.disputes_lost} deposit dispute{l.landlord.disputes_lost > 1 ? "s" : ""} on TrustRent</p>}
             {l.landlord.computed && l.landlord.tenancies_completed > 0 && l.landlord.avg_deduction_pct != null && (
               <p className="text-sm text-muted">Keeps {l.landlord.avg_deduction_pct}% of the deposit on average, across {l.landlord.tenancies_completed} settled TrustRent deposit{l.landlord.tenancies_completed > 1 ? "s" : ""}.</p>
             )}
             {l.about_owner && <p className="mt-3 text-[15px] whitespace-pre-line">{l.about_owner}</p>}
           </section>
+          {apiMode && !mine && <ReportListing listingId={l.id} />}
         </div>
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
           <section className="rounded-2xl border border-line bg-surface p-5">

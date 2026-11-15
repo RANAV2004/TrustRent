@@ -13,6 +13,9 @@ const NAV: { href: string; label: string; icon: string }[] = [
   { href: "/admin/deposits", label: "Deposits & receipts", icon: "M4 7h16v13H4zM8 7V4h8v3M9 13l2 2 4-4" },
   { href: "/admin/premium", label: "Premium", icon: "M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6 5.8 21l1.4-7L2 9.3l7-.8z" },
   { href: "/admin/verifications", label: "Verifications", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4" },
+  { href: "/admin/reports", label: "Reports & reviews", icon: "M4 21V4h12l-1.5 4L16 12H4" },
+  { href: "/admin/payouts", label: "Payouts", icon: "M3 7h18v10H3zM7 12h.01M17 12h.01M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4" },
+  { href: "/admin/audit", label: "Audit log", icon: "M9 4h6v3H9zM6 6h12v15H6zM9 11h6M9 15h4" },
 ];
 function Mark() {
   return (
