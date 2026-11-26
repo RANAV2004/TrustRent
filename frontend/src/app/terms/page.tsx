@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Contact, LegalPage } from "@/components/legal-page";
 export const metadata: Metadata = { title: "TrustRent Terms of Use" };
-export default function TermsPage() { // terms
+export default function TermsPage() {
   return (
     <LegalPage title="Terms of Use">
       <p>These terms apply when you use TrustRent to find a home, list a home, or pay and settle a security deposit. By creating an account you agree to them.</p>

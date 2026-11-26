@@ -51,7 +51,7 @@ function ChangePassword({ firstTime }: { firstTime: boolean }) {
   );
 }
 
-export default function LawyerPortal() { // lawyer portal
+export default function LawyerPortal() {
   const { user } = useAuth();
   const [cases, setCases] = useState<CaseSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);

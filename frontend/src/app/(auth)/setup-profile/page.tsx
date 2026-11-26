@@ -44,7 +44,7 @@ function SetupProfile() {
     </AuthFrame>
   );
 }
-export default function SetupProfilePage() { // profile setup
+export default function SetupProfilePage() {
   return (
     <Suspense>
       <SetupProfile />

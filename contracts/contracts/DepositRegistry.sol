@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract DepositRegistry is Ownable { // deposit receipts
+contract DepositRegistry is Ownable {
     struct Receipt {
         uint256 amount;
         bytes32 dataHash;

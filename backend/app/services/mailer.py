@@ -93,7 +93,7 @@ def build_lawyer_rejected_email(to: str, name: str, reference: str, note: str) -
         "You're welcome to apply again with the corrected details or documents.",
         "TrustRent",
     ])
-async def send_message_email(msg: EmailMessage) -> None:  # best effort: callers decide what to do on failure
+async def send_message_email(msg: EmailMessage) -> None:
     try:
         await asyncio.to_thread(_send, msg)
     except (smtplib.SMTPException, OSError) as e:

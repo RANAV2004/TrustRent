@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MockINR is ERC20, Ownable { // test rupee token
+contract MockINR is ERC20, Ownable {
     uint256 public constant FAUCET_AMOUNT = 50_000 * 10 ** 18;
     mapping(address => uint256) public lastFaucetRequest;
     uint256 public constant FAUCET_COOLDOWN = 1 hours;

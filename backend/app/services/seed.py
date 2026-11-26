@@ -63,12 +63,12 @@ async def seed_sample_listings(db: AsyncSession) -> int:
 async def seed_demo_admin(db: AsyncSession) -> None:
     from app.core.config import settings
     from app.services.accounts import hash_secret, verify_secret
-    if not settings.ADMIN_EMAILS or not settings.DEMO_ADMIN_PASSWORD:  # seeds in live mode too, so the admin email can't be claimed
+    if not settings.ADMIN_EMAILS or not settings.DEMO_ADMIN_PASSWORD:
         return
     email = settings.ADMIN_EMAILS[0].lower()
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
-        if not verify_secret(settings.DEMO_ADMIN_PASSWORD, existing.password_hash):  # password from .env
+        if not verify_secret(settings.DEMO_ADMIN_PASSWORD, existing.password_hash):
             existing.password_hash = hash_secret(settings.DEMO_ADMIN_PASSWORD)
             await db.commit()
         return
@@ -161,7 +161,7 @@ async def seed_demo_deposits(db: AsyncSession) -> int:
         added += 1
     await db.commit()
     return added
-async def remove_sample_data(db: AsyncSession) -> int:  # sample cleanup
+async def remove_sample_data(db: AsyncSession) -> int:
     demo = list(await db.scalars(select(User.id).where(User.is_demo.is_(True))))
     homes = list(await db.scalars(select(Listing.id).where(or_(Listing.owner_id.in_(demo), Listing.listed_days_ago.is_not(None)))))
     if not demo and not homes:

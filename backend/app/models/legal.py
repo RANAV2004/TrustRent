@@ -2,11 +2,10 @@ from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from app.core.database import Base
 from app.models.marketplace import utcnow
 
-
-class LawyerApplication(Base):  # lawyer sign-up request, reviewed by an admin
+class LawyerApplication(Base):
     __tablename__ = "lawyer_applications"
-    id = Column(String(12), primary_key=True)  # reference shown to the applicant, e.g. LAW-7F3A9C21
-    status = Column(String(12), default="pending", index=True)  # pending / approved / rejected
+    id = Column(String(12), primary_key=True)
+    status = Column(String(12), default="pending", index=True)
     full_name = Column(String(120), nullable=False)
     email = Column(String(255), nullable=False, index=True)
     phone = Column(String(24), nullable=False)
@@ -29,15 +28,14 @@ class LawyerApplication(Base):  # lawyer sign-up request, reviewed by an admin
     enrolment_file_path = Column(String(500), nullable=False)
     enrolment_file_iv = Column(String(64), nullable=False)
     enrolment_file_hash = Column(String(66), nullable=False)
-    public_photo = Column(String(500), nullable=True)  # set on approval
-    user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)  # the account made on approval
+    public_photo = Column(String(500), nullable=True)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
     submitted_at = Column(DateTime, default=utcnow)
     reviewed_at = Column(DateTime, nullable=True)
     reviewed_by = Column(String(36), nullable=True)
     review_note = Column(String(500), nullable=True)
 
-
-class LegalCase(Base):  # an owner's conversation with a lawyer
+class LegalCase(Base):
     __tablename__ = "legal_cases"
     id = Column(String(36), primary_key=True)
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
@@ -49,7 +47,6 @@ class LegalCase(Base):  # an owner's conversation with a lawyer
     owner_last_read = Column(DateTime, nullable=True)
     lawyer_last_read = Column(DateTime, nullable=True)
 
-
 class LegalMessage(Base):
     __tablename__ = "legal_messages"
     id = Column(String(36), primary_key=True)
@@ -58,8 +55,7 @@ class LegalMessage(Base):
     text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=utcnow)
 
-
-class Agreement(Base):  # a PDF the lawyer prepared
+class Agreement(Base):
     __tablename__ = "agreements"
     id = Column(String(36), primary_key=True)
     case_id = Column(String(36), ForeignKey("legal_cases.id"), nullable=False, index=True)
@@ -72,8 +68,7 @@ class Agreement(Base):  # a PDF the lawyer prepared
     size = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=utcnow)
 
-
-class AgreementShare(Base):  # the owner sent the agreement to a tenant
+class AgreementShare(Base):
     __tablename__ = "agreement_shares"
     id = Column(String(36), primary_key=True)
     agreement_id = Column(String(36), ForeignKey("agreements.id"), nullable=False, index=True)

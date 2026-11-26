@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArbitratorRegistry is Ownable { // arbitrators
+contract ArbitratorRegistry is Ownable {
     mapping(address => bool) private _approvedArbitrators;
 
     event ArbitratorAdded(address indexed arbitrator);

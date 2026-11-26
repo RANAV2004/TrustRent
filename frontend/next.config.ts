@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
-// Without NEXT_PUBLIC_API_URL the app runs in browser-only demo mode: accounts, payments and
-// verification are faked in localStorage. Never ship that by accident.
-// Checked only while building: NEXT_PUBLIC_ values are baked in then, and `next start` may not have them.
 function checkApiUrl(phase: string) {
   if (phase !== PHASE_PRODUCTION_BUILD || process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_ALLOW_DEMO === "true") return;
   throw new Error(

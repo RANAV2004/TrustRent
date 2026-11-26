@@ -62,7 +62,7 @@ function StatusCheck() {
   );
 }
 
-export default function LawyerApplyPage() { // lawyer application
+export default function LawyerApplyPage() {
   const [v, setV] = useState({
     fullName: "", email: "", phone: "+91 ", city: "", barCouncil: "", enrolmentNo: "", experienceYears: "",
     languages: "", officeAddress: "", about: "", idDocType: "",

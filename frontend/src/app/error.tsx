@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { reportError } from "@/lib/report-error";
 
-export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) { // page crash
+export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => { reportError(error, error.digest); }, [error]);
   return (
     <main className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-start justify-center gap-4 px-4">

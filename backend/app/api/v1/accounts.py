@@ -35,16 +35,16 @@ ID_DOC_TYPES = {"Masked Aadhaar card", "PAN card", "Passport", "Voter ID", "Driv
 MAX_DOC_BYTES = 10 * 1024 * 1024
 def field_error(message: str, field: str | None = None, code: int = status.HTTP_400_BAD_REQUEST) -> HTTPException:
     return HTTPException(status_code=code, detail={"message": message, "field": field})
-def valid_name(name: str) -> bool:  # letters (any script, with their vowel signs), spaces and . ' - only
+def valid_name(name: str) -> bool:
     return any(c.isalpha() for c in name) and all(
         c.isalpha() or unicodedata.category(c).startswith("M") or c in " .'-" for c in name)
 DOC_HINT = "Upload a photo (JPG, PNG, WebP, HEIC) or a PDF of the document."
-def is_document(content: bytes) -> bool:  # checks the file's real type, not the name the browser sent
+def is_document(content: bytes) -> bool:
     head = content[:16]
     return (head.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n", b"%PDF-", b"GIF87a", b"GIF89a"))
             or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")
             or (head[4:8] == b"ftyp" and head[8:12] in (b"heic", b"heix", b"heif", b"mif1", b"msf1", b"hevc")))
-async def read_limited(upload: UploadFile, max_bytes: int, field: str, too_big: str) -> bytes:  # stop reading at the limit
+async def read_limited(upload: UploadFile, max_bytes: int, field: str, too_big: str) -> bytes:
     chunks, total = [], 0
     while chunk := await upload.read(1024 * 1024):
         total += len(chunk)
@@ -55,7 +55,7 @@ async def read_limited(upload: UploadFile, max_bytes: int, field: str, too_big: 
 def session(user: User, mfa: bool = False) -> dict:
     if user.banned_at or user.deleted_at:
         raise field_error("This account has been suspended. Contact TrustRent support.", None, status.HTTP_403_FORBIDDEN)
-    if is_admin(user) and user.totp_enabled_at and not mfa:  # password (or Google) was right: now the authenticator code
+    if is_admin(user) and user.totp_enabled_at and not mfa:
         challenge = create_access_token(subject=user.id, expires_delta=timedelta(minutes=5), claims={"purpose": "2fa"})
         return {"twoFactorRequired": True, "challenge": challenge}
     user._mfa = mfa
@@ -141,13 +141,13 @@ async def validate_sign_up(body: SignUpIn, db: AsyncSession) -> tuple[str, str]:
         raise field_error("Choose whether you're looking for a home or renting one out.", "accountType")
     return email, phone
 TOO_MANY_EMAILS = "Too many codes were requested from your network. Try again in an hour."
-@router.post("/auth/signup/email-code")  # signup code
+@router.post("/auth/signup/email-code")
 async def sign_up_email_code(body: SignUpIn, request: Request, db: AsyncSession = Depends(get_db)):
     email, _ = await validate_sign_up(body, db)
     if not email_enabled():
         raise field_error("Sign-up is paused: email verification isn't set up on this server.", "email",
                           status.HTTP_503_SERVICE_UNAVAILABLE)
-    if EMAILS_PER_IP.blocked(client_ip(request)):  # protects the daily sending quota from abuse
+    if EMAILS_PER_IP.blocked(client_ip(request)):
         raise field_error(TOO_MANY_EMAILS, "email", status.HTTP_429_TOO_MANY_REQUESTS)
     if SIGNUP_CODES_PER_EMAIL.blocked(email):
         raise field_error("Too many codes were sent to this email today. Try again tomorrow.", "email",
@@ -184,7 +184,7 @@ async def check_email_code(db: AsyncSession, email: str, code: str, field: str =
         await db.commit()
         raise field_error("That code isn't right. Check the email and try again.", field)
     await db.delete(row)
-@router.post("/auth/signup", status_code=201)  # sign up
+@router.post("/auth/signup", status_code=201)
 async def sign_up(body: SignUpIn, db: AsyncSession = Depends(get_db)):
     email, phone = await validate_sign_up(body, db)
     await check_email_code(db, email, body.emailCode)
@@ -194,13 +194,13 @@ async def sign_up(body: SignUpIn, db: AsyncSession = Depends(get_db)):
     db.add(user)
     try:
         await db.commit()
-    except IntegrityError:  # two sign-ups for the same username/phone at the same moment
+    except IntegrityError:
         await db.rollback()
         raise field_error("That username, email or phone was just registered. Try another.", None,
                           status.HTTP_409_CONFLICT) from None
     await db.refresh(user)
     return session(user)
-@router.post("/auth/password-login")  # user login
+@router.post("/auth/password-login")
 async def password_login(body: PasswordLoginIn, request: Request, db: AsyncSession = Depends(get_db)):
     ident = body.identifier.strip().lower()
     ip = client_ip(request)
@@ -214,7 +214,7 @@ async def password_login(body: PasswordLoginIn, request: Request, db: AsyncSessi
         raise field_error("That username/email and password don't match.", None, status.HTTP_401_UNAUTHORIZED)
     LOGIN_FAILURES_PER_ACCOUNT.reset(ident)
     return session(user)
-@router.post("/auth/google")  # google login
+@router.post("/auth/google")
 async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
     if body.credential and settings.GOOGLE_CLIENT_ID:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -231,7 +231,7 @@ async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
         first, last = "", ""
         existing = await db.scalar(select(User).where(func.lower(User.email) == email))
         reserved = email in {e.lower() for e in settings.ADMIN_EMAILS}
-        if reserved or (existing and (existing.provider != "google" or existing.password_hash)):  # demo shortcut can't take over accounts
+        if reserved or (existing and (existing.provider != "google" or existing.password_hash)):
             raise field_error("Sign in with your password for this account.", "email", status.HTTP_403_FORBIDDEN)
     else:
         raise field_error("Google sign-in is not configured on this server.", None, status.HTTP_501_NOT_IMPLEMENTED)
@@ -247,7 +247,7 @@ async def google_sign_in(body: GoogleIn, db: AsyncSession = Depends(get_db)):
 RESET_SENT = "If an account uses that email, a reset code is on its way."
 def _reset_key(email: str) -> str:
     return f"reset:{email}"
-@router.post("/auth/password/forgot")  # forgot password
+@router.post("/auth/password/forgot")
 async def forgot_password(body: ForgotIn, request: Request, db: AsyncSession = Depends(get_db)):
     email = body.email.strip().lower()
     if not email_enabled():
@@ -257,11 +257,11 @@ async def forgot_password(body: ForgotIn, request: Request, db: AsyncSession = D
         raise field_error(TOO_MANY_EMAILS, "email", status.HTTP_429_TOO_MANY_REQUESTS)
     user = await db.scalar(select(User).where(func.lower(User.email) == email))
     if not user or user.deleted_at or user.banned_at or user.is_demo:
-        return {"ok": True, "message": RESET_SENT}  # same answer: don't reveal who has an account
+        return {"ok": True, "message": RESET_SENT}
     row = await db.get(EmailVerification, _reset_key(email))
     if row and row.expires_at - timedelta(minutes=EMAIL_CODE_MINUTES - 1) > utcnow():
-        return {"ok": True, "message": RESET_SENT}  # one code a minute
-    if not RESET_CODES_PER_EMAIL.allow(email):  # 5 codes x 5 tries a day: a 6-digit code can't be guessed
+        return {"ok": True, "message": RESET_SENT}
+    if not RESET_CODES_PER_EMAIL.allow(email):
         return {"ok": True, "message": RESET_SENT}
     if row is None:
         row = EmailVerification(email=_reset_key(email))
@@ -276,7 +276,7 @@ async def forgot_password(body: ForgotIn, request: Request, db: AsyncSession = D
         await db.commit()
         raise field_error(str(e), "email", status.HTTP_502_BAD_GATEWAY) from None
     return {"ok": True, "message": RESET_SENT}
-@router.post("/auth/password/reset")  # reset password
+@router.post("/auth/password/reset")
 async def reset_password(body: ResetIn, db: AsyncSession = Depends(get_db)):
     email = body.email.strip().lower()
     validate_password(body.password)
@@ -285,25 +285,25 @@ async def reset_password(body: ResetIn, db: AsyncSession = Depends(get_db)):
     if not user or user.deleted_at:
         raise field_error("The code has expired. Ask for a new one.", "code")
     user.password_hash = hash_secret(body.password)
-    user.password_changed_at = utcnow()  # signs out every other device
+    user.password_changed_at = utcnow()
     await db.commit()
     await db.refresh(user)
     LOGIN_FAILURES_PER_ACCOUNT.reset(email)
     LOGIN_FAILURES_PER_ACCOUNT.reset((user.username or "").lower())
     return session(user)
-@router.get("/users/me")  # profile
+@router.get("/users/me")
 async def me(user: User = Depends(get_current_user)):
     return {"user": user_out(user)}
-@router.put("/users/me")  # edit profile
+@router.put("/users/me")
 async def update_me(body: ProfileIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     email, phone = await validate_profile(body, db, me=user)
-    if user.email and email != user.email.lower():  # an unverified address could hijack someone's Google sign-in
+    if user.email and email != user.email.lower():
         raise field_error("Your email can't be changed here. Contact TrustRent support to change it.", "email")
     apply_profile(user, body, email, phone)
     await db.commit()
     await db.refresh(user)
     return {"user": user_out(user)}
-@router.put("/users/me/password")  # change password
+@router.put("/users/me/password")
 async def change_password(body: ChangePasswordIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if user.password_hash and not verify_secret(body.currentPassword, user.password_hash):
         raise field_error("Your current password isn't right.", "currentPassword")
@@ -311,11 +311,11 @@ async def change_password(body: ChangePasswordIn, user: User = Depends(get_curre
     if user.password_hash and verify_secret(body.newPassword, user.password_hash):
         raise field_error("Choose a password different from the current one.", "newPassword")
     user.password_hash = hash_secret(body.newPassword)
-    user.password_changed_at, user.must_change_password = utcnow(), False  # other devices are signed out
+    user.password_changed_at, user.must_change_password = utcnow(), False
     await db.commit()
     await db.refresh(user)
-    return session(user)  # a fresh sign-in for this device
-@router.put("/users/me/account-type")  # account type
+    return session(user)
+@router.put("/users/me/account-type")
 async def set_account_type(body: AccountTypeIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if body.accountType not in ("seeker", "owner"):
         raise field_error("Unknown account type.", "accountType")
@@ -325,7 +325,7 @@ async def set_account_type(body: AccountTypeIn, user: User = Depends(get_current
     await db.commit()
     await db.refresh(user)
     return {"user": user_out(user)}
-@router.post("/users/me/identity")  # id upload
+@router.post("/users/me/identity")
 async def upload_identity(
     docType: str = Form(...),
     file: UploadFile = File(...),
@@ -356,7 +356,7 @@ async def upload_identity(
         notify_admins("id-submission", "ID verification waiting", [
             "Someone uploaded an ID document. Review it on the Verifications page."], "/admin/verifications")
     return {"user": user_out(user), "pendingReview": not user.is_verified}
-@router.post("/subscriptions")  # premium
+@router.post("/subscriptions")
 async def subscribe(body: SubscriptionIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if body.planId not in PLANS:
         raise field_error("Unknown plan.", "planId")
@@ -375,6 +375,6 @@ async def subscribe(body: SubscriptionIn, user: User = Depends(get_current_user)
     await db.commit()
     await db.refresh(user)
     return {"user": user_out(user)}
-@router.get("/subscriptions/plans")  # premium plans
+@router.get("/subscriptions/plans")
 async def plans():
     return [{"id": k, "days": d, "price": p} for k, (d, p) in PLANS.items()]

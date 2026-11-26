@@ -41,15 +41,14 @@ services:
         sync: false
       - key: STORAGE_MASTER_KEY_HEX
         sync: false
-      - key: APP_URL  # your website, e.g. https://trustrent.in (used in lawyer emails)
+      - key: APP_URL
         sync: false
-      - key: ADMIN_TWO_FACTOR  # admins must use an authenticator app
+      - key: ADMIN_TWO_FACTOR
         value: required
-      - key: SENTRY_DSN  # optional: error tracking from sentry.io
+      - key: SENTRY_DSN
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
-      # Render's disk is wiped on every deploy: keep documents and photos in S3 / Cloudflare R2
       - key: STORAGE_PROVIDER
         value: s3
       - key: S3_ENDPOINT_URL

@@ -29,7 +29,7 @@ async def _deposit_for(db: AsyncSession, deposit_id: str, user: User) -> Deposit
     return d
 def _side(d: Deposit, user: User) -> str | None:
     return "tenant" if user.id == d.tenant_id else "owner" if user.id == d.owner_id else None
-def clean_image(raw: bytes) -> bytes:  # strip location
+def clean_image(raw: bytes) -> bytes:
     try:
         img = Image.open(io.BytesIO(raw))
         img = ImageOps.exif_transpose(img)
@@ -49,14 +49,14 @@ def photo_out(p: ConditionPhoto, names: dict[str, str], ledger: dict[str, str]) 
         "fileHash": p.file_hash, "receipt": p.record_tx,
         "verified": recorded is not None and recorded == p.record_hash == fingerprint(photo_details(p)),
     }
-@router.get("/deposits/{deposit_id}/photos")  # photo list
+@router.get("/deposits/{deposit_id}/photos")
 async def list_photos(deposit_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     d = await _deposit_for(db, deposit_id, user)
     side = _side(d, user)
     admin = is_reviewer(user)
     q = select(ConditionPhoto).where(ConditionPhoto.deposit_id == d.id)
     if not admin:
-        q = q.where(ConditionPhoto.side == side)  # own photos only
+        q = q.where(ConditionPhoto.side == side)
     rows = list(await db.scalars(q.order_by(ConditionPhoto.created_at)))
     names = {}
     for uid in {r.uploader_id for r in rows}:
@@ -71,7 +71,7 @@ async def list_photos(deposit_id: str, user: User = Depends(get_current_user), d
         "canUpload": {s: bool(side) and d.status in OPEN_FOR[s] for s in STAGES},
         "photos": [photo_out(r, names, ledger) for r in rows],
     }
-@router.post("/deposits/{deposit_id}/photos", status_code=201)  # photo upload
+@router.post("/deposits/{deposit_id}/photos", status_code=201)
 async def upload_photo(
     deposit_id: str,
     stage: str = Form(...),
@@ -110,7 +110,7 @@ async def upload_photo(
     await record_photo(db, p)
     await db.commit()
     return photo_out(p, {user.id: display_name(user)}, {p.record_tx: p.record_hash})
-@router.get("/deposits/{deposit_id}/photos/{photo_id}/file")  # photo file
+@router.get("/deposits/{deposit_id}/photos/{photo_id}/file")
 async def photo_file(deposit_id: str, photo_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     d = await _deposit_for(db, deposit_id, user)
     p = await db.get(ConditionPhoto, photo_id)

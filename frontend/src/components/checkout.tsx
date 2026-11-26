@@ -20,7 +20,7 @@ function loadRazorpay(): Promise<void> {
     document.body.appendChild(s);
   });
 }
-export function payWithRazorpay(order: Order): Promise<PaymentResult> { // pay with razorpay
+export function payWithRazorpay(order: Order): Promise<PaymentResult> {
   return loadRazorpay().then(() => new Promise<PaymentResult>((resolve, reject) => {
     const rzp = new window.Razorpay!({
       key: order.keyId,
@@ -40,7 +40,7 @@ export function payWithRazorpay(order: Order): Promise<PaymentResult> { // pay w
     rzp.open();
   }));
 }
-export function DemoCheckout({ order, onPaid, onCancel }: { order: Order; onPaid: (r: PaymentResult) => void; onCancel: () => void }) { // demo checkout
+export function DemoCheckout({ order, onPaid, onCancel }: { order: Order; onPaid: (r: PaymentResult) => void; onCancel: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (

@@ -60,13 +60,13 @@ async def _load(db: AsyncSession, deposit_id: str) -> Deposit:
     if not d:
         raise HTTPException(status_code=404, detail="Deposit not found")
     return d
-@router.get("/deposits")  # my deposits
+@router.get("/deposits")
 async def my_deposits(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(Deposit).where(or_(Deposit.tenant_id == user.id, Deposit.owner_id == user.id))
                             .order_by(Deposit.paid_at.desc()))
     state = await ledger_state(db)
     return [await deposit_out(db, d, user, with_check=True, state=state) for d in rows]
-@router.get("/deposits/lookup")  # receipt lookup
+@router.get("/deposits/lookup")
 async def lookup(q: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     q = q.strip()
     d = await db.get(Deposit, q.upper()) if q.upper().startswith("DEP-") else None
@@ -79,7 +79,7 @@ async def lookup(q: str, user: User = Depends(get_current_user), db: AsyncSessio
     if not d:
         raise HTTPException(status_code=404, detail="No deposit matches that ID or hash")
     return await deposit_out(db, d, user, with_check=True)
-@router.get("/deposits/{deposit_id}")  # deposit
+@router.get("/deposits/{deposit_id}")
 async def get_deposit(deposit_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if user.id not in (d.tenant_id, d.owner_id) and not is_reviewer(user):
@@ -90,7 +90,7 @@ def _check_amount(d: Deposit, body: ProposeIn) -> None:
         raise field_error(f"The deduction can't be more than the deposit (₹{d.amount}).", "deducted")
     if body.deducted > 0 and len(body.reason.strip()) < 10:
         raise field_error("Explain the deduction in a sentence (what was damaged or unpaid).", "reason")
-@router.post("/deposits/{deposit_id}/propose")  # settle propose
+@router.post("/deposits/{deposit_id}/propose")
 async def propose(deposit_id: str, body: ProposeIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if user.id != d.owner_id:
@@ -107,7 +107,7 @@ async def propose(deposit_id: str, body: ProposeIn, user: User = Depends(get_cur
         f"of your {rupees(d.amount)} deposit.", *([f"Reason: {d.deduction_reason}"] if d.deduction_reason else []),
         "Accept it, or dispute it and TrustRent will review the case."], "/deposits")
     return await deposit_out(db, d, user, with_check=True)
-@router.post("/deposits/{deposit_id}/respond")  # settle reply
+@router.post("/deposits/{deposit_id}/respond")
 async def respond(deposit_id: str, body: RespondIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if user.id != d.tenant_id:
@@ -132,7 +132,7 @@ async def respond(deposit_id: str, body: RespondIn, user: User = Depends(get_cur
             f"The tenant disputed a deduction of {rupees(d.deducted)} on a {rupees(d.amount)} deposit. Settle it on the Deposits page."],
             "/admin/deposits")
     return await deposit_out(db, d, user, with_check=True)
-@router.post("/admin/deposits/{deposit_id}/settle")  # admin settle
+@router.post("/admin/deposits/{deposit_id}/settle")
 async def admin_settle(deposit_id: str, body: ProposeIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if d.status == "settled":
@@ -147,7 +147,7 @@ async def admin_settle(deposit_id: str, body: ProposeIn, admin: User = Depends(r
             f"TrustRent decided the settlement: {rupees(d.refunded)} refunded to the tenant, {rupees(d.deducted)} to the owner.",
             *([f"Reason: {d.deduction_reason}"] if d.deduction_reason else [])], "/deposits")
     return await deposit_out(db, d, admin, with_check=True)
-@router.post("/admin/deposits", status_code=201)  # admin receipt
+@router.post("/admin/deposits", status_code=201)
 async def record_offline_deposit(body: RecordIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     who = body.tenant.strip().lstrip("@").lower()
     tenant = await db.scalar(select(User).where(or_(User.id == body.tenant.strip(), func.lower(User.username) == who,
@@ -179,12 +179,12 @@ async def record_offline_deposit(body: RecordIn, admin: User = Depends(require_a
     await record_deposit(db, d)
     await db.commit()
     return await deposit_out(db, d, admin, with_check=True)
-@router.get("/admin/deposits")  # admin deposits
+@router.get("/admin/deposits")
 async def all_deposits(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(Deposit).order_by(Deposit.paid_at.desc()))
     state = await ledger_state(db)
     return [await deposit_out(db, d, admin, with_check=True, state=state) for d in rows]
-@router.post("/admin/deposits/{deposit_id}/owner-paid")  # owner payout
+@router.post("/admin/deposits/{deposit_id}/owner-paid")
 async def owner_paid(deposit_id: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     d = await _load(db, deposit_id)
     if d.owner_payout != "due":

@@ -42,11 +42,11 @@ async def _read_doc(upload: UploadFile, field: str) -> bytes:
     if not is_document(content):
         raise field_error(DOC_HINT, field)
     return content
-@router.get("/owner/application")  # owner verify
+@router.get("/owner/application")
 async def get_application(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     app = await db.get(OwnerApplication, user.id)
     return {"application": application_out(app) if app else None}
-@router.post("/owner/application", status_code=201)  # owner verify
+@router.post("/owner/application", status_code=201)
 async def submit_application(
     relation: str = Form(...),
     idDocType: str = Form(...),
@@ -91,7 +91,7 @@ async def submit_application(
     notify_admins("owner-application", "Owner verification waiting", [
         "An owner sent ID and property documents. Review them on the Verifications page."], "/admin/verifications")
     return {"application": application_out(app)}
-@router.post("/owner/application/{user_id}/review")  # owner review
+@router.post("/owner/application/{user_id}/review")
 async def review_application(user_id: str, body: ReviewIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     self_demo = settings.DEMO_MODE and user.id == user_id
     if not (admin_unlocked(user) or self_demo):
@@ -105,7 +105,7 @@ async def review_application(user_id: str, body: ReviewIn, user: User = Depends(
     await db.commit()
     await db.refresh(app)
     await try_rebuild_register(db)
-    if user.id != user_id:  # an admin's decision (not the demo self-approval)
+    if user.id != user_id:
         owner = await db.get(User, user_id)
         if body.approve:
             notify(owner, "You're a verified owner on TrustRent", [

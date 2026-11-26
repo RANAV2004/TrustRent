@@ -4,10 +4,10 @@ import { Logo } from "@/components/app-shell";
 export const LEGAL_UPDATED = "29 October 2026";
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "";
 export const GRIEVANCE_OFFICER = process.env.NEXT_PUBLIC_GRIEVANCE_OFFICER || "";
-export function Contact() { // contact
+export function Contact() {
   return CONTACT_EMAIL ? <a href={`mailto:${CONTACT_EMAIL}`} className="text-vault underline">{CONTACT_EMAIL}</a> : <strong>the contact email listed on this page</strong>;
 }
-export function LegalPage({ title, children }: { title: string; children: ReactNode }) { // legal page
+export function LegalPage({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="min-h-dvh bg-mist">
       <header className="border-b border-line bg-surface">

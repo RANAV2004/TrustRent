@@ -49,7 +49,7 @@ function Lookup() {
     </div>
   );
 }
-export default function LookupPage() { // receipt lookup
+export default function LookupPage() {
   return (
     <Suspense>
       <Lookup />

@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { reportError } from "@/lib/report-error";
 
-// Last resort when the whole layout fails: plain styles, since the app's CSS may not have loaded.
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => { reportError(error, error.digest); }, [error]);
   return (

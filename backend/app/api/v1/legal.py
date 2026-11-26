@@ -1,10 +1,3 @@
-"""Lawyers: verified sign-up, the owners' lawyer directory, owner-lawyer chats and agreement PDFs.
-
-Flow: a lawyer applies from the sign-in page (no account yet) -> an admin checks the documents and
-approves -> TrustRent creates the account and issues a username and temporary password -> the lawyer
-signs in, sets their own password and sees owners' messages -> the lawyer uploads the agreement PDF ->
-the owner downloads it and can share it with a tenant they know through TrustRent.
-"""
 import re
 import secrets
 import uuid
@@ -46,23 +39,17 @@ MAX_PHOTO_BYTES = 5 * 1024 * 1024
 MAX_PDF_BYTES = 15 * 1024 * 1024
 UNAVAILABLE = "This lawyer is no longer available on TrustRent."
 
-
-# ---------- helpers ----------
-
 def _text(value: str, field: str, label: str, lo: int, hi: int) -> str:
     v = (value or "").strip()
     if not lo <= len(v) <= hi:
         raise field_error(f"Enter {label} ({lo} to {hi} characters).", field)
     return v
 
-
 def _active_lawyer(u: User | None) -> bool:
     return bool(u and u.is_lawyer and not u.banned_at and not u.deleted_at)
 
-
 def _safe_name(name: str | None, fallback: str) -> str:
     return "".join(c for c in (name or "") if c.isalnum() or c in "._- ")[:100] or fallback
-
 
 def application_out(a: LawyerApplication, base_url: str = "") -> dict:
     return {
@@ -77,7 +64,6 @@ def application_out(a: LawyerApplication, base_url: str = "") -> dict:
         "reviewNote": a.review_note,
     }
 
-
 def lawyer_card(a: LawyerApplication, u: User, base_url: str) -> dict:
     return {
         "id": u.id, "name": display_name(u), "photo": media_url(base_url, a.public_photo) if a.public_photo else None,
@@ -86,7 +72,6 @@ def lawyer_card(a: LawyerApplication, u: User, base_url: str) -> dict:
         "phone": u.phone or a.phone, "email": u.email, "officeAddress": a.office_address, "about": a.about or "",
     }
 
-
 async def _new_username(db: AsyncSession, full_name: str) -> str:
     stem = re.sub(r"[^a-z]", "", full_name.lower().split(" ")[0])[:10] or "lawyer"
     while True:
@@ -94,14 +79,12 @@ async def _new_username(db: AsyncSession, full_name: str) -> str:
         if not await db.scalar(select(User.id).where(func.lower(User.username) == candidate)):
             return candidate
 
-
-def _temp_password() -> str:  # easy to read out on the phone: no 0/O, 1/l/I
+def _temp_password() -> str:
     letters = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
     digits = "23456789"
     chars = [secrets.choice(letters) for _ in range(8)] + [secrets.choice(digits) for _ in range(3)]
     secrets.SystemRandom().shuffle(chars)
     return "".join(chars)
-
 
 async def _email_quietly(msg) -> bool:
     if not email_enabled():
@@ -112,7 +95,6 @@ async def _email_quietly(msg) -> bool:
         return True
     except EmailError:
         return False
-
 
 async def _identity_taken(db: AsyncSession, email: str, phone: str, skip_application: str | None = None) -> tuple[str, str] | None:
     if email in {e.lower() for e in settings.ADMIN_EMAILS} or await db.scalar(select(User.id).where(func.lower(User.email) == email)):
@@ -126,15 +108,11 @@ async def _identity_taken(db: AsyncSession, email: str, phone: str, skip_applica
         return "email", "An application with this email is already waiting for review."
     return None
 
-
-# ---------- applying (no account yet) ----------
-
-@router.get("/lawyers/options")  # form choices
+@router.get("/lawyers/options")
 async def options():
     return {"practiceAreas": PRACTICE_AREAS, "idDocTypes": sorted(ID_DOC_TYPES)}
 
-
-@router.post("/lawyers/applications", status_code=201)  # lawyer applies
+@router.post("/lawyers/applications", status_code=201)
 async def apply(
     request: Request,
     fullName: str = Form(...),
@@ -196,7 +174,7 @@ async def apply(
                           status.HTTP_409_CONFLICT)
     raw_photo = await read_limited(photo, MAX_PHOTO_BYTES, "photo", "The photo is larger than 5 MB.")
     try:
-        clean_photo = clean_image(raw_photo)  # also strips location data from the photo
+        clean_photo = clean_image(raw_photo)
     except HTTPException:
         raise field_error("Your photo must be a JPG, PNG or WebP image.", "photo") from None
     id_bytes = await read_limited(idProof, MAX_DOC_BYTES, "idProof", "The ID document is larger than 10 MB.")
@@ -231,17 +209,13 @@ async def apply(
         f"{name} applied as a lawyer ({council}, enrolment {enrolment}). Review it on the Legal page."], "/admin/legal")
     return {"reference": ref, "email": mail, "status": "pending"}
 
-
-@router.get("/lawyers/applications/status")  # application status
+@router.get("/lawyers/applications/status")
 async def application_status(reference: str, email: str, db: AsyncSession = Depends(get_db)):
     a = await db.get(LawyerApplication, reference.strip().upper())
-    if not a or a.email != email.strip().lower():  # both must match: no peeking at other people's applications
+    if not a or a.email != email.strip().lower():
         raise HTTPException(status_code=404, detail="We couldn't find an application with that reference and email.")
     return {"reference": a.id, "status": a.status, "submittedAt": iso(a.submitted_at), "reviewedAt": iso(a.reviewed_at),
             "reviewNote": a.review_note if a.status == "rejected" else None}
-
-
-# ---------- directory (owners) ----------
 
 def require_owner(user: User = Depends(get_current_user)) -> User:
     if account_type(user) != "owner" and not admin_unlocked(user):
@@ -249,8 +223,7 @@ def require_owner(user: User = Depends(get_current_user)) -> User:
                           None, status.HTTP_403_FORBIDDEN)
     return user
 
-
-@router.get("/lawyers")  # lawyer directory
+@router.get("/lawyers")
 async def directory(request: Request, user: User = Depends(require_owner), db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(
         select(LawyerApplication, User).join(User, User.id == LawyerApplication.user_id)
@@ -261,11 +234,9 @@ async def directory(request: Request, user: User = Depends(require_owner), db: A
     base = str(request.base_url)
     return [lawyer_card(a, u, base) for a, u in rows]
 
-
-@router.get("/legal/contacts")  # tenants the owner can share with
+@router.get("/legal/contacts")
 async def contacts(user: User = Depends(require_owner), db: AsyncSession = Depends(get_db)):
     return await _owner_contacts(db, user)
-
 
 async def _owner_contacts(db: AsyncSession, owner: User) -> list[dict]:
     via: dict[str, str] = {}
@@ -282,22 +253,16 @@ async def _owner_contacts(db: AsyncSession, owner: User) -> list[dict]:
     return sorted(({"id": u.id, "name": display_name(u), "username": u.username or "", "via": via[u.id]} for u in people),
                   key=lambda x: x["name"].lower())
 
-
-# ---------- cases: owner <-> lawyer ----------
-
 class CaseIn(BaseModel):
     lawyerId: str
     listingId: str | None = None
     message: str = Field(min_length=1, max_length=2000)
 
-
 class TextIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
-
 class ShareIn(BaseModel):
     tenantId: str
-
 
 async def _case_for(db: AsyncSession, case_id: str, user: User, allow_admin: bool = False) -> LegalCase:
     c = await db.get(LegalCase, case_id)
@@ -305,10 +270,8 @@ async def _case_for(db: AsyncSession, case_id: str, user: User, allow_admin: boo
         raise HTTPException(status_code=404, detail="Case not found")
     return c
 
-
 def _side(c: LegalCase, user: User) -> str:
     return "owner" if user.id == c.owner_id else "lawyer" if user.id == c.lawyer_id else "admin"
-
 
 def agreement_out(a: Agreement, names: dict[str, str], shares: list[AgreementShare] | None = None) -> dict:
     out = {"id": a.id, "caseId": a.case_id, "title": a.title, "fileName": a.file_name, "fileHash": a.file_hash,
@@ -317,12 +280,10 @@ def agreement_out(a: Agreement, names: dict[str, str], shares: list[AgreementSha
         out["sharedWith"] = [{"id": s.tenant_id, "name": names.get(s.tenant_id, ""), "sharedAt": iso(s.shared_at)} for s in shares]
     return out
 
-
 async def _names(db: AsyncSession, ids: set[str]) -> dict[str, str]:
     if not ids:
         return {}
     return {u.id: display_name(u) for u in await db.scalars(select(User).where(User.id.in_(ids)))}
-
 
 async def case_out(db: AsyncSession, c: LegalCase, viewer: User, full: bool = False) -> dict:
     owner, lawyer = await db.get(User, c.owner_id), await db.get(User, c.lawyer_id)
@@ -356,14 +317,12 @@ async def case_out(db: AsyncSession, c: LegalCase, viewer: User, full: bool = Fa
         out["documents"] = [agreement_out(d, names, [s for s in shares if s.agreement_id == d.id]) for d in docs]
     return out
 
-
 def _application_received_email(to: str, name: str, ref: str):
     from app.services.mailer import _simple_email
     return _simple_email(to, f"We received your lawyer application {ref}", [
         f"Hello {name},", f"Thank you for applying to TrustRent as a lawyer. Your reference is {ref}.",
         "We usually verify lawyers within 24 to 48 hours and will email your sign-in details once you're approved.",
         "TrustRent"])
-
 
 async def _tell_other_side(db: AsyncSession, c: LegalCase, sender: User, text: str) -> None:
     other_id = c.lawyer_id if sender.id == c.owner_id else c.owner_id
@@ -372,7 +331,6 @@ async def _tell_other_side(db: AsyncSession, c: LegalCase, sender: User, text: s
         return
     notify(await db.get(User, other_id), f"New message from {display_name(sender)}", [
         f"About {c.subject}:", f'"{snippet(text)}"', "Reply on TrustRent."], f"/legal/{c.id}", thread=f"case:{c.id}")
-
 
 def _add_message(db: AsyncSession, c: LegalCase, sender: User, text: str) -> None:
     now = utcnow()
@@ -383,8 +341,7 @@ def _add_message(db: AsyncSession, c: LegalCase, sender: User, text: str) -> Non
     else:
         c.lawyer_last_read = now
 
-
-@router.post("/legal/cases", status_code=201)  # hire lawyer
+@router.post("/legal/cases", status_code=201)
 async def open_case(body: CaseIn, user: User = Depends(require_owner), db: AsyncSession = Depends(get_db)):
     if is_admin(user):
         raise field_error("Admins can't hire lawyers.", None, status.HTTP_403_FORBIDDEN)
@@ -416,21 +373,18 @@ async def open_case(body: CaseIn, user: User = Depends(require_owner), db: Async
             "Reply in your TrustRent lawyer portal."], f"/legal/{c.id}", thread=f"case:{c.id}")
     return await case_out(db, c, user, full=True)
 
-
-@router.get("/legal/cases")  # my cases
+@router.get("/legal/cases")
 async def my_cases(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(LegalCase).where(or_(LegalCase.owner_id == user.id, LegalCase.lawyer_id == user.id))
                             .order_by(LegalCase.updated_at.desc()))
     return [await case_out(db, c, user) for c in rows]
 
-
-@router.get("/legal/cases/{case_id}")  # case
+@router.get("/legal/cases/{case_id}")
 async def get_case(case_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _case_for(db, case_id, user, allow_admin=True)
     return await case_out(db, c, user, full=True)
 
-
-@router.post("/legal/cases/{case_id}/messages", status_code=201)  # case message
+@router.post("/legal/cases/{case_id}/messages", status_code=201)
 async def case_message(case_id: str, body: TextIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _case_for(db, case_id, user)
     if user.id == c.owner_id and not _active_lawyer(await db.get(User, c.lawyer_id)):
@@ -438,13 +392,12 @@ async def case_message(case_id: str, body: TextIn, user: User = Depends(get_curr
     text = body.text.strip()
     if not text:
         raise field_error("Write a message.", "text")
-    _add_message(db, c, user, text)  # only moves the sender's read marker
+    _add_message(db, c, user, text)
     await db.commit()
     await _tell_other_side(db, c, user, text)
     return await case_out(db, c, user, full=True)
 
-
-@router.post("/legal/cases/{case_id}/read")  # mark case read
+@router.post("/legal/cases/{case_id}/read")
 async def case_read(case_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _case_for(db, case_id, user)
     if user.id == c.owner_id:
@@ -454,8 +407,7 @@ async def case_read(case_id: str, user: User = Depends(get_current_user), db: As
     await db.commit()
     return {"ok": True}
 
-
-@router.post("/legal/cases/{case_id}/agreements", status_code=201)  # lawyer uploads agreement
+@router.post("/legal/cases/{case_id}/agreements", status_code=201)
 async def upload_agreement(case_id: str, title: str = Form(...), file: UploadFile = File(...),
                            user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _case_for(db, case_id, user)
@@ -478,7 +430,6 @@ async def upload_agreement(case_id: str, title: str = Form(...), file: UploadFil
         f'Your lawyer shared "{name}" for {c.subject}.', "Download it, read it, and share it with your tenant."], f"/legal/{c.id}")
     return await case_out(db, c, user, full=True)
 
-
 async def _agreement_access(db: AsyncSession, agreement_id: str, user: User) -> tuple[Agreement, LegalCase]:
     a = await db.get(Agreement, agreement_id)
     c = await db.get(LegalCase, a.case_id) if a else None
@@ -491,8 +442,7 @@ async def _agreement_access(db: AsyncSession, agreement_id: str, user: User) -> 
         raise HTTPException(status_code=404, detail="Document not found")
     return a, c
 
-
-@router.get("/legal/agreements/{agreement_id}/file")  # download agreement
+@router.get("/legal/agreements/{agreement_id}/file")
 async def agreement_file(agreement_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     a, _ = await _agreement_access(db, agreement_id, user)
     try:
@@ -504,15 +454,14 @@ async def agreement_file(agreement_id: str, user: User = Depends(get_current_use
         "Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store",
     })
 
-
-@router.post("/legal/agreements/{agreement_id}/share")  # owner shares with tenant
+@router.post("/legal/agreements/{agreement_id}/share")
 async def share_agreement(agreement_id: str, body: ShareIn, user: User = Depends(get_current_user),
                           db: AsyncSession = Depends(get_db)):
     a, c = await _agreement_access(db, agreement_id, user)
     if user.id != c.owner_id:
         raise HTTPException(status_code=403, detail="Only the owner can share the agreement")
     known = {p["id"] for p in await _owner_contacts(db, user)}
-    if body.tenantId not in known:  # only people the owner already deals with on TrustRent
+    if body.tenantId not in known:
         raise field_error("Choose a tenant who has messaged you about a home or paid you a deposit.", "tenantId")
     if not await db.scalar(select(AgreementShare.id).where(AgreementShare.agreement_id == a.id,
                                                            AgreementShare.tenant_id == body.tenantId)):
@@ -523,8 +472,7 @@ async def share_agreement(agreement_id: str, body: ShareIn, user: User = Depends
             f'"{a.title}" was prepared by a TrustRent-verified lawyer.', "Download it and read it before you sign."], "/agreements")
     return await case_out(db, c, user, full=True)
 
-
-@router.get("/legal/agreements")  # agreements shared with me
+@router.get("/legal/agreements")
 async def shared_with_me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(
         select(AgreementShare, Agreement, LegalCase).join(Agreement, Agreement.id == AgreementShare.agreement_id)
@@ -541,15 +489,11 @@ async def shared_with_me(user: User = Depends(get_current_user), db: AsyncSessio
         })
     return out
 
-
-# ---------- admin ----------
-
 class ReviewIn(BaseModel):
     approve: bool
     note: str | None = Field(default=None, max_length=500)
 
-
-@router.get("/admin/legal")  # admin legal desk
+@router.get("/admin/legal")
 async def admin_legal(request: Request, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     base = str(request.base_url)
     apps = list(await db.scalars(select(LawyerApplication).order_by(LawyerApplication.submitted_at.desc())))
@@ -580,8 +524,7 @@ async def admin_legal(request: Request, admin: User = Depends(require_admin), db
                    "agreements": doc_counts.get(c.id, 0), "updatedAt": iso(c.updated_at)} for c in cases],
     }
 
-
-@router.get("/admin/legal/applications/{reference}/{doc}")  # application document
+@router.get("/admin/legal/applications/{reference}/{doc}")
 async def application_document(reference: str, doc: str, admin: User = Depends(require_full_admin),
                                db: AsyncSession = Depends(get_db)):
     a = await db.get(LawyerApplication, reference)
@@ -598,12 +541,10 @@ async def application_document(reference: str, doc: str, admin: User = Depends(r
         raise HTTPException(status_code=410, detail="This document is no longer stored on the server") from None
     return _file_response(content, name if doc == "photo" else getattr(a, name))
 
-
 def _credentials(username: str, password: str, emailed: bool) -> dict:
     return {"username": username, "password": password, "emailed": emailed}
 
-
-@router.post("/admin/legal/applications/{reference}/review")  # approve lawyer
+@router.post("/admin/legal/applications/{reference}/review")
 async def review_application(reference: str, body: ReviewIn, admin: User = Depends(require_full_admin),
                              db: AsyncSession = Depends(get_db)):
     a = await db.get(LawyerApplication, reference)
@@ -637,8 +578,7 @@ async def review_application(reference: str, body: ReviewIn, admin: User = Depen
     emailed = await _email_quietly(build_lawyer_approved_email(a.email, a.full_name, username, password))
     return {"application": application_out(a), "credentials": _credentials(username, password, emailed)}
 
-
-@router.post("/admin/legal/lawyers/{user_id}/reset-password")  # new lawyer password
+@router.post("/admin/legal/lawyers/{user_id}/reset-password")
 async def reset_lawyer_password(user_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await db.get(User, user_id)
     if not u or not u.is_lawyer or u.deleted_at:

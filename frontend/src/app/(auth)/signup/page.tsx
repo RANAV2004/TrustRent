@@ -137,7 +137,7 @@ function SignUp() {
     </AuthFrame>
   );
 }
-export default function SignUpPage() { // sign up
+export default function SignUpPage() {
   return (
     <Suspense>
       <SignUp />

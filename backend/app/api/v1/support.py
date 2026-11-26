@@ -1,4 +1,3 @@
-"""Help & support: users raise a query (with screenshots) and get a ticket number; admins reply and close it."""
 import secrets
 import uuid
 from datetime import datetime, timezone
@@ -31,9 +30,8 @@ STATUSES = ("open", "in_progress", "closed")
 STATUS_LABEL = {"open": "Open", "in_progress": "In progress", "closed": "Closed"}
 MAX_IMAGES = 5
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
-TICKET_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I/L: easy to read out on the phone
+TICKET_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 NOT_FOUND = "No ticket of yours has that number. Check it and try again."
-
 
 def normalise_ticket_no(raw: str) -> str:
     s = "".join(c for c in raw.upper() if c.isalnum())
@@ -41,14 +39,12 @@ def normalise_ticket_no(raw: str) -> str:
         s = s[3:]
     return f"TKT-{s[:6]}-{s[6:]}" if len(s) == 10 else raw.strip().upper()
 
-
 async def _new_ticket_no(db: AsyncSession) -> str:
     day = datetime.now(timezone.utc).strftime("%y%m%d")
     while True:
         candidate = f"TKT-{day}-{''.join(secrets.choice(TICKET_ALPHABET) for _ in range(4))}"
         if not await db.get(SupportTicket, candidate):
             return candidate
-
 
 async def _images(files: list[UploadFile] | None) -> list[tuple[str, bytes]]:
     files = [f for f in (files or []) if f and f.filename]
@@ -58,13 +54,12 @@ async def _images(files: list[UploadFile] | None) -> list[tuple[str, bytes]]:
     for f in files:
         raw = await read_limited(f, MAX_IMAGE_BYTES, "images", f"{f.filename} is larger than 5 MB.")
         try:
-            content = clean_image(raw)  # must really be a picture; also removes location data
+            content = clean_image(raw)
         except HTTPException:
             raise field_error(f"{f.filename} isn't an image. Add screenshots as JPG, PNG or WebP.", "images") from None
         name = "".join(c for c in f.filename if c.isalnum() or c in "._- ")[:80] or "screenshot"
         out.append((name.rsplit(".", 1)[0] + ".jpg", content))
     return out
-
 
 def _store(db: AsyncSession, ticket_id: str, user: User, images: list[tuple[str, bytes]], message_id: str | None) -> None:
     store = private_storage()
@@ -75,13 +70,11 @@ def _store(db: AsyncSession, ticket_id: str, user: User, images: list[tuple[str,
                                 file_path=path, file_iv=iv, file_hash=HashService.hash_bytes(content), size=len(content),
                                 created_at=utcnow()))
 
-
 async def _ticket_for(db: AsyncSession, ticket_no: str, user: User) -> SupportTicket:
     t = await db.get(SupportTicket, normalise_ticket_no(ticket_no))
     if not t or (t.user_id != user.id and not admin_unlocked(user)):
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return t
-
 
 def summary(t: SupportTicket, owner: User | None = None) -> dict:
     out = {"ticketNo": t.id, "category": t.category, "subject": t.subject, "status": t.status,
@@ -91,7 +84,6 @@ def summary(t: SupportTicket, owner: User | None = None) -> dict:
         out["user"] = {"id": owner.id, "name": display_name(owner), "email": owner.email,
                        "username": owner.username or "", "accountType": account_type(owner)}
     return out
-
 
 async def ticket_out(db: AsyncSession, t: SupportTicket, viewer: User) -> dict:
     owner = await db.get(User, t.user_id)
@@ -109,13 +101,11 @@ async def ticket_out(db: AsyncSession, t: SupportTicket, viewer: User) -> dict:
                       "images": [att(a) for a in files if a.message_id == m.id]} for m in msgs],
     }
 
-
-@router.get("/support/categories")  # query types
+@router.get("/support/categories")
 async def categories():
     return {"categories": CATEGORIES, "maxImages": MAX_IMAGES}
 
-
-@router.post("/support/tickets", status_code=201)  # raise a query
+@router.post("/support/tickets", status_code=201)
 async def raise_ticket(
     category: str = Form(...),
     subject: str = Form(...),
@@ -151,19 +141,16 @@ async def raise_ticket(
     notify_admins("support-ticket", "New support query", [f"{t.id}: {t.category}, \"{t.subject}\"."], "/admin/queries")
     return await ticket_out(db, t, user)
 
-
-@router.get("/support/tickets")  # my queries
+@router.get("/support/tickets")
 async def my_tickets(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(SupportTicket).where(SupportTicket.user_id == user.id).order_by(SupportTicket.created_at.desc()))
     return [summary(t) for t in rows]
 
-
-@router.get("/support/tickets/{ticket_no}")  # find a ticket
+@router.get("/support/tickets/{ticket_no}")
 async def get_ticket(ticket_no: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await ticket_out(db, await _ticket_for(db, ticket_no, user), user)
 
-
-@router.post("/support/tickets/{ticket_no}/messages", status_code=201)  # reply on a ticket
+@router.post("/support/tickets/{ticket_no}/messages", status_code=201)
 async def reply(
     ticket_no: str,
     text: str = Form(...),
@@ -186,7 +173,7 @@ async def reply(
     await db.flush()
     _store(db, t.id, user, pics, m.id)
     t.updated_at = now
-    if support and t.status == "open":  # a reply from support means someone is on it
+    if support and t.status == "open":
         t.status = "in_progress"
     await db.commit()
     if support:
@@ -197,8 +184,7 @@ async def reply(
         notify_admins(f"ticket-reply:{t.id}", f"Reply on {t.id}", [f'The user added a message to "{t.subject}".'], f"/help/{t.id}")
     return await ticket_out(db, t, user)
 
-
-@router.get("/support/tickets/{ticket_no}/images/{image_id}")  # screenshot
+@router.get("/support/tickets/{ticket_no}/images/{image_id}")
 async def ticket_image(ticket_no: str, image_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     t = await _ticket_for(db, ticket_no, user)
     a = await db.get(TicketAttachment, image_id)
@@ -211,15 +197,11 @@ async def ticket_image(ticket_no: str, image_id: str, user: User = Depends(get_c
     return Response(content=content, media_type="image/jpeg",
                     headers={"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff"})
 
-
-# ---------- admin ----------
-
 class StatusIn(BaseModel):
     status: str
     note: str = Field(default="", max_length=2000)
 
-
-@router.get("/admin/support")  # admin queries
+@router.get("/admin/support")
 async def admin_tickets(status_filter: str = Query("", alias="status"), q: str = Query("", max_length=100), admin: User = Depends(require_admin),
                         db: AsyncSession = Depends(get_db)):
     stmt = select(SupportTicket, User).join(User, User.id == SupportTicket.user_id)
@@ -234,8 +216,7 @@ async def admin_tickets(status_filter: str = Query("", alias="status"), q: str =
     counts = dict((await db.execute(select(SupportTicket.status, func.count()).group_by(SupportTicket.status))).all())
     return {"tickets": [summary(t, u) for t, u in rows], "counts": {s: int(counts.get(s, 0)) for s in STATUSES}}
 
-
-@router.post("/admin/support/{ticket_no}/status")  # change status / close
+@router.post("/admin/support/{ticket_no}/status")
 async def set_status(ticket_no: str, body: StatusIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     t = await _ticket_for(db, ticket_no, admin)
     if body.status not in STATUSES:

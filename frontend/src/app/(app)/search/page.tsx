@@ -189,7 +189,7 @@ function Results() {
     </div>
   );
 }
-export default function SearchPage() { // search
+export default function SearchPage() {
   return (
     <Suspense>
       <Results />

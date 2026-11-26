@@ -17,7 +17,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 class DecisionIn(BaseModel):
     approve: bool
     note: str | None = None
-def require_admin(user: User = Depends(get_current_user)) -> User:  # admin console: ADMIN_EMAILS only
+def require_admin(user: User = Depends(get_current_user)) -> User:
     if not is_admin(user):
         raise HTTPException(status_code=403, detail="Admins only")
     if not admin_unlocked(user):
@@ -27,7 +27,7 @@ def require_admin(user: User = Depends(get_current_user)) -> User:  # admin cons
             else "Sign in again with your authenticator code.",
             "field": None, "code": "2fa_setup_required" if setup else "2fa_required"})
     return user
-def require_full_admin(user: User = Depends(require_admin)) -> User:  # documents and approvals: admins only, not arbitrators
+def require_full_admin(user: User = Depends(require_admin)) -> User:
     return user
 SAFE_INLINE = {"image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"}
 def _person(u: User | None) -> dict:
@@ -40,7 +40,7 @@ def identity_out(s: IdentitySubmission) -> dict:
         "status": s.status, "submittedAt": iso(s.submitted_at), "reviewedAt": iso(s.reviewed_at),
         "reviewNote": s.review_note,
     }
-@router.get("/verifications")  # admin verify
+@router.get("/verifications")
 async def verifications(admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     users = {u.id: u for u in await db.scalars(select(User))}
     owners = await db.scalars(select(OwnerApplication).order_by(OwnerApplication.submitted_at.desc()))
@@ -52,14 +52,14 @@ async def verifications(admin: User = Depends(require_full_admin), db: AsyncSess
 def _file_response(content: bytes, name: str) -> Response:
     media = mimetypes.guess_type(name or "")[0] or "application/octet-stream"
     safe = "".join(c for c in (name or "document") if c.isalnum() or c in "._- ")[:100] or "document"
-    inline = media in SAFE_INLINE  # never render uploaded HTML or SVG in the admin's browser
+    inline = media in SAFE_INLINE
     return Response(content=content, media_type=media if inline else "application/octet-stream", headers={
         "Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{safe}"',
         "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store",
     })
-@router.get("/owner-applications/{user_id}/{doc}")  # owner docs
+@router.get("/owner-applications/{user_id}/{doc}")
 async def owner_document(user_id: str, doc: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     app = await db.get(OwnerApplication, user_id)
     if not app or doc not in ("id", "property"):
@@ -67,13 +67,13 @@ async def owner_document(user_id: str, doc: str, admin: User = Depends(require_f
     path, iv, name = ((app.id_file_path, app.id_file_iv, app.id_file_name) if doc == "id"
                       else (app.property_file_path, app.property_file_iv, app.property_file_name))
     return _file_response(read_private(path, iv), name)
-@router.get("/identity/{submission_id}/file")  # id doc
+@router.get("/identity/{submission_id}/file")
 async def identity_document(submission_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
     if not s:
         raise HTTPException(status_code=404, detail="Not found")
     return _file_response(read_private(s.file_path, s.file_iv), s.file_name)
-@router.post("/identity/{submission_id}/review")  # id review
+@router.post("/identity/{submission_id}/review")
 async def review_identity(submission_id: str, body: DecisionIn, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     s = await db.get(IdentitySubmission, submission_id)
     if not s:
@@ -85,7 +85,7 @@ async def review_identity(submission_id: str, body: DecisionIn, admin: User = De
     if user:
         if body.approve:
             user.is_verified = True
-        else:  # keep verified if another document of theirs was approved
+        else:
             other = await db.scalar(select(IdentitySubmission.id).where(
                 IdentitySubmission.user_id == user.id, IdentitySubmission.id != s.id,
                 IdentitySubmission.status == "approved").limit(1))
@@ -97,7 +97,7 @@ async def review_identity(submission_id: str, body: DecisionIn, admin: User = De
     else:
         notify(user, "We couldn't verify your ID", [f"Reason: {s.review_note}", "Upload a clearer photo and try again."], "/premium")
     return {"submission": identity_out(s)}
-@router.get("/verification-register.xlsx")  # excel register
+@router.get("/verification-register.xlsx")
 async def download_register(admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     path = await rebuild_register(db)
     return FileResponse(path, filename="TrustRent_verification_register.xlsx",

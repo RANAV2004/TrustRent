@@ -3,7 +3,7 @@ import Link from "next/link";
 import { InputHTMLAttributes, ReactNode, useState } from "react";
 import { AccountType, authMode, COUNTRIES } from "@/lib/auth";
 import { Logo } from "./app-shell";
-export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) { // auth frame
+export function AuthFrame({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
   return (
     <div className="grid min-h-dvh content-start lg:content-normal lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-vault-deep p-10 text-white lg:flex">
@@ -62,7 +62,7 @@ function Check() {
 }
 const inputBase =
   "w-full rounded-lg border bg-surface px-3 py-2.5 text-[15px] text-ink placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-vault/20";
-export function TextField({ // text field
+export function TextField({
   label,
   error,
   hint,
@@ -87,7 +87,7 @@ export function TextField({ // text field
     </div>
   );
 }
-export function PasswordField(props: Omit<Parameters<typeof TextField>[0], "type">) { // password field
+export function PasswordField(props: Omit<Parameters<typeof TextField>[0], "type">) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -103,7 +103,7 @@ export function PasswordField(props: Omit<Parameters<typeof TextField>[0], "type
     </div>
   );
 }
-export function CountrySelect({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) { // country select
+export function CountrySelect({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor="country" className="text-sm font-medium">Country</label>
@@ -123,7 +123,7 @@ export function CountrySelect({ value, onChange, error }: { value: string; onCha
     </div>
   );
 }
-export function PhoneField({ // phone field
+export function PhoneField({
   value,
   onChange,
   error,
@@ -170,7 +170,7 @@ export function PhoneField({ // phone field
     </div>
   );
 }
-export function Divider({ label = "or" }: { label?: string }) { // divider
+export function Divider({ label = "or" }: { label?: string }) {
   return (
     <div className="my-6 flex items-center gap-3 text-xs text-muted">
       <span className="h-px flex-1 bg-line" />
@@ -179,7 +179,7 @@ export function Divider({ label = "or" }: { label?: string }) { // divider
     </div>
   );
 }
-export function SubmitButton({ busy, children }: { busy?: boolean; children: ReactNode }) { // submit button
+export function SubmitButton({ busy, children }: { busy?: boolean; children: ReactNode }) {
   return (
     <button
       type="submit"
@@ -190,14 +190,14 @@ export function SubmitButton({ busy, children }: { busy?: boolean; children: Rea
     </button>
   );
 }
-export function SecondaryLink({ href, children }: { href: string; children: ReactNode }) { // secondary link
+export function SecondaryLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link href={href} className="font-medium text-vault underline-offset-2 hover:underline">
       {children}
     </Link>
   );
 }
-export function FormError({ message }: { message: string | null }) { // form error
+export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <p role="alert" className="rounded-lg border border-claim/30 bg-claim-soft px-3 py-2.5 text-sm text-claim">
@@ -205,7 +205,7 @@ export function FormError({ message }: { message: string | null }) { // form err
     </p>
   );
 }
-export function AccountTypeToggle({ value, onChange, legend = "I am...", hint }: { // account type toggle
+export function AccountTypeToggle({ value, onChange, legend = "I am...", hint }: {
   value: AccountType | null;
   onChange: (t: AccountType) => void;
   legend?: string;

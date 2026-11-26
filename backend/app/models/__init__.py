@@ -10,6 +10,6 @@ __all__ = [
     "LawyerApplication", "LegalCase", "LegalMessage", "Agreement", "AgreementShare",
     "SupportTicket", "TicketMessage", "TicketAttachment",
 ]
-for _table in Base.metadata.tables.values():  # checked at commit
+for _table in Base.metadata.tables.values():
     for _fk in _table.foreign_key_constraints:
         _fk.deferrable, _fk.initially = True, "DEFERRED"

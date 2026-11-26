@@ -46,7 +46,7 @@ function Deposits() {
     </div>
   );
 }
-export default function DepositsPage() { // my deposits
+export default function DepositsPage() {
   return (
     <Suspense>
       <Deposits />

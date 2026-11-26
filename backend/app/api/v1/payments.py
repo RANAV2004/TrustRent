@@ -30,7 +30,7 @@ class VerifyIn(BaseModel):
     orderId: str
     paymentId: str | None = None
     signature: str | None = None
-@router.get("/config")  # config
+@router.get("/config")
 async def public_config():
     return {
         "demoMode": settings.DEMO_MODE,
@@ -54,7 +54,7 @@ async def _deposit_listing(db: AsyncSession, user: User, listing_id: str | None)
     if open_dep:
         raise field_error(f"You already have an active deposit for this home ({open_dep}).", None, status.HTTP_409_CONFLICT)
     return listing
-@router.post("/payments/order")  # payment order
+@router.post("/payments/order")
 async def create_order(body: OrderIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     if user.is_lawyer:
         raise field_error("Lawyer accounts can't make payments here.", None, status.HTTP_403_FORBIDDEN)
@@ -88,7 +88,7 @@ async def create_order(body: OrderIn, user: User = Depends(get_current_user), db
         "amount": amount, "currency": "INR", "description": description,
         "prefill": {"name": display_name(user), "email": user.email, "contact": user.phone or ""},
     }
-@router.post("/payments/verify")  # payment verify
+@router.post("/payments/verify")
 async def verify_payment(body: VerifyIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     pay = await db.scalar(select(Payment).where(Payment.order_id == body.orderId, Payment.user_id == user.id))
     if not pay:
@@ -118,22 +118,16 @@ async def verify_payment(body: VerifyIn, user: User = Depends(get_current_user),
         out["depositId"] = dep.id if dep else None
     return out
 async def complete_payment(db: AsyncSession, pay: Payment, user: User, payment_id: str | None) -> str | None:
-    """Mark the order paid exactly once and give the customer what they bought.
-
-    The browser callback and Razorpay's webhook can arrive together, or a customer can click twice: the
-    conditional UPDATE lets only one of them through, so Premium or a deposit is never granted twice.
-    Returns a message when the money can't be used (the payment is flagged for a refund).
-    """
     now = utcnow()
     claimed = await db.execute(
         update(Payment).where(Payment.id == pay.id, Payment.status.in_(("created", "failed")))
         .values(status="paid", paid_at=now, payment_id=payment_id).execution_options(synchronize_session=False))
-    if claimed.rowcount != 1:  # someone else already completed it
+    if claimed.rowcount != 1:
         await db.rollback()
         return None
     pay.status, pay.paid_at, pay.payment_id = "paid", now, payment_id
     problem = await _fulfil(db, pay, user)
-    if problem:  # money taken but nothing delivered: flag it for refund
+    if problem:
         pay.status = "refund_due" if pay.provider == "razorpay" else "cancelled"
     await db.commit()
     if not problem:
@@ -143,13 +137,8 @@ async def complete_payment(db: AsyncSession, pay: Payment, user: User, payment_i
               f"Razorpay payment {payment_id} (order {pay.order_id}, Rs {pay.amount}) was taken but couldn't be used: "
               f"{problem} Refund it from the Razorpay dashboard.")
     return problem
-@router.post("/payments/razorpay/webhook", include_in_schema=False)  # razorpay webhook
+@router.post("/payments/razorpay/webhook", include_in_schema=False)
 async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    """Completes payments when the customer closed the window before the browser could confirm them.
-
-    In the Razorpay dashboard add a webhook to https://<backend>/api/v1/payments/razorpay/webhook for the
-    events payment.captured and order.paid, and put its secret in RAZORPAY_WEBHOOK_SECRET.
-    """
     raw = await request.body()
     secret = settings.RAZORPAY_WEBHOOK_SECRET
     if not secret:
@@ -202,7 +191,7 @@ async def _fulfil(db: AsyncSession, pay: Payment, user: User) -> str | None:
         return "This home is no longer listed, so no deposit was taken. Any amount charged will be refunded."
     open_dep = await db.scalar(select(Deposit.id).where(Deposit.listing_id == listing.id, Deposit.tenant_id == user.id,
                                                        Deposit.status != "settled"))
-    if open_dep:  # second order paid for the same home
+    if open_dep:
         return f"You already have an active deposit for this home ({open_dep}). This payment will be refunded."
     dep = Deposit(id=f"DEP-{uuid.uuid4().hex[:8].upper()}", listing_id=listing.id, tenant_id=user.id,
                   owner_id=listing.owner_id, amount=pay.amount, payment_id=pay.id, status="held", paid_at=pay.paid_at)

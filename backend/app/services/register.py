@@ -19,7 +19,7 @@ STATUS_FILL = {
 STATUS_LABEL = {"submitted": "Pending", "pending": "Pending", "approved": "Verified", "rejected": "Rejected"}
 def _fmt(dt):
     return dt.strftime("%Y-%m-%d %H:%M UTC") if dt else ""
-def _text_cell(v):  # a value starting with "=" would become a live Excel formula in the admin's copy
+def _text_cell(v):
     return "'" + v if isinstance(v, str) and v.startswith("=") else v
 def _sheet(ws, headers, rows, status_col):
     ws.append(headers)

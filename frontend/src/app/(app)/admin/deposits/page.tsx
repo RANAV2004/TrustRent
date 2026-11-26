@@ -130,7 +130,7 @@ function Chain({ blocks, genesis, intact, network }: { blocks: LedgerBlock[]; ge
     </section>
   );
 }
-export default function AdminDepositsPage() { // admin deposits
+export default function AdminDepositsPage() {
   const [deposits, setDeposits] = useState<Deposit[] | null>(null);
   const [ledger, setLedger] = useState<Awaited<ReturnType<typeof getLedger>> | null>(null);
   const [error, setError] = useState<string | null>(null);

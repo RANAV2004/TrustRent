@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { AuthFrame, FormError, PasswordField, SecondaryLink, SubmitButton, TextField } from "@/components/auth-ui";
 import { AuthError, authMode, DEMO_OTP, TwoFactorRequired, validatePassword } from "@/lib/auth";
 import { afterSignIn, useAuth } from "@/lib/auth-context";
-export default function ForgotPasswordPage() { // forgot password
+export default function ForgotPasswordPage() {
   const { requestPasswordReset, resetPassword } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() { // forgot password
       const u = await resetPassword(email.trim(), code.trim(), password);
       router.replace(afterSignIn(u, null));
     } catch (err) {
-      if (err instanceof TwoFactorRequired) { // admins: the new password works, but sign-in also needs the authenticator
+      if (err instanceof TwoFactorRequired) {
         router.replace("/login?reset=1");
         return;
       }

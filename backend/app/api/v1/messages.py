@@ -42,7 +42,7 @@ def _touch(c: Conversation, sender_id: str, at: datetime) -> None:
         c.seeker_last_read = at
     else:
         c.owner_last_read = at
-@router.get("/inbox")  # inbox
+@router.get("/inbox")
 async def inbox(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     convs = list(await db.scalars(
         select(Conversation).where(or_(Conversation.seeker_id == user.id, Conversation.owner_id == user.id))
@@ -61,7 +61,7 @@ async def inbox(user: User = Depends(get_current_user), db: AsyncSession = Depen
         "conversations": [conversation_out(c, listings[c.listing_id], users[c.seeker_id], users[c.owner_id]) for c in convs],
         "messages": [message_out(m, display_name(users[m.sender_id])) for m in msgs],
     }
-@router.post("/conversations")  # open chat
+@router.post("/conversations")
 async def open_conversation(body: OpenIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     listing = await db.get(Listing, body.listingId)
     if not listing or listing.status != "live":
@@ -85,7 +85,7 @@ async def open_conversation(body: OpenIn, user: User = Depends(get_current_user)
         await db.refresh(c)
     owner = await db.get(User, c.owner_id)
     return conversation_out(c, listing, user, owner)
-@router.post("/conversations/{cid}/messages", status_code=201)  # send message
+@router.post("/conversations/{cid}/messages", status_code=201)
 async def send_message(cid: str, body: MessageIn, background: BackgroundTasks,
                        user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _conversation_for(db, cid, user)
@@ -118,13 +118,13 @@ async def send_message(cid: str, body: MessageIn, background: BackgroundTasks,
         notify(other, f"Visit request for {title}", [
             f"{display_name(user)} would like to visit {title} and suggested {len(m.visit_slots or [])} time(s).",
             "Open your messages to accept one of the times or decline."], "/messages")
-    elif not recently_active(previous_read):  # they're not reading the chat right now
+    elif not recently_active(previous_read):
         notify(other, f"New message from {display_name(user)}", [
             f"About {title}:", f'"{snippet(text)}"', "Reply in your TrustRent messages."], "/messages", thread=c.id)
     if settings.DEMO_MODE and owner and owner.is_demo and user.id == c.seeker_id:
         background.add_task(demo_owner_reply, c.id, m.id)
     return message_out(m, display_name(user))
-@router.post("/messages/{mid}/visit-response")  # visit reply
+@router.post("/messages/{mid}/visit-response")
 async def respond_to_visit(mid: str, body: VisitResponseIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     m = await db.get(Message, mid)
     if not m or m.kind != "visit":
@@ -165,7 +165,7 @@ async def _respond(db: AsyncSession, c: Conversation, m: Message, owner: User, a
             f"{display_name(owner)} can't make the times you suggested for {title}.",
             "Suggest new times in your messages."], "/messages")
     return m, display_name(seeker)
-@router.post("/conversations/{cid}/read")  # mark read
+@router.post("/conversations/{cid}/read")
 async def mark_read(cid: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     c = await _conversation_for(db, cid, user)
     if user.id == c.seeker_id:

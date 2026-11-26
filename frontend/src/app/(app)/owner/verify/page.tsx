@@ -20,7 +20,7 @@ function FileField({ label, hint, name, onPick }: { label: string; hint: string;
     </label>
   );
 }
-export default function VerifyOwner() { // owner verify
+export default function VerifyOwner() {
   const { user } = useAuth();
   const uidv = user?.id ?? "";
   const app = useStore(() => getApplication(uidv), [uidv]);

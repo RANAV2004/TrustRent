@@ -1,5 +1,5 @@
 import Link from "next/link";
-export default function AgentPage() { // homepref ai
+export default function AgentPage() {
   return (
     <div className="flex flex-col items-center gap-5 py-16 text-center">
       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-vault-soft text-vault" aria-hidden="true">

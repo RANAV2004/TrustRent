@@ -62,7 +62,7 @@ function RaiseQuery({ onRaised }: { onRaised: (ticketNo: string) => void }) {
     form.append("category", category);
     form.append("subject", subject.trim());
     form.append("description", description.trim());
-    const from = document.referrer ? new URL(document.referrer) : null; // the page they came from, on this site only
+    const from = document.referrer ? new URL(document.referrer) : null;
     form.append("pageUrl", from && from.origin === window.location.origin ? from.pathname : "");
     files.forEach((f) => form.append("images", f));
     setBusy(true);
@@ -110,7 +110,7 @@ function RaiseQuery({ onRaised }: { onRaised: (ticketNo: string) => void }) {
   );
 }
 
-export default function HelpPage() { // help and support
+export default function HelpPage() {
   const [tickets, setTickets] = useState<TicketSummary[] | null>(null);
   const [raised, setRaised] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);

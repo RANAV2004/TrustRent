@@ -12,7 +12,7 @@ const tone: Record<Deposit["status"], string> = {
   disputed: "bg-claim-soft text-claim",
   settled: "bg-mist text-ink",
 };
-export function Hash({ label, value, href }: { label: string; value: string | null; href?: string | null }) { // hash
+export function Hash({ label, value, href }: { label: string; value: string | null; href?: string | null }) {
   const [copied, setCopied] = useState(false);
   if (!value) return null;
   return (
@@ -29,7 +29,7 @@ export function Hash({ label, value, href }: { label: string; value: string | nu
     </div>
   );
 }
-export function VerifiedBadge({ d }: { d: Deposit }) { // verified badge
+export function VerifiedBadge({ d }: { d: Deposit }) {
   if (!d.verification) return null;
   return d.verification.verified ? (
     <p className="rounded-lg bg-vault-soft px-3 py-2 text-sm text-vault">
@@ -41,7 +41,7 @@ export function VerifiedBadge({ d }: { d: Deposit }) { // verified badge
     </p>
   );
 }
-export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; onChange: (d: Deposit) => void; highlight?: boolean }) { // deposit card
+export function DepositCard({ d, onChange, highlight = false }: { d: Deposit; onChange: (d: Deposit) => void; highlight?: boolean }) {
   const [deducted, setDeducted] = useState("0");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);

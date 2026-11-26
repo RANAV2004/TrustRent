@@ -1,7 +1,7 @@
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from app.core.database import Base
 from app.models.marketplace import utcnow
-class Payment(Base):  # payment
+class Payment(Base):
     __tablename__ = "payments"
     id = Column(String(36), primary_key=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
@@ -14,7 +14,7 @@ class Payment(Base):  # payment
     status = Column(String(10), default="created")
     created_at = Column(DateTime, default=utcnow)
     paid_at = Column(DateTime, nullable=True)
-class Deposit(Base):  # deposit
+class Deposit(Base):
     __tablename__ = "deposits"
     id = Column(String(16), primary_key=True)
     listing_id = Column(String(16), ForeignKey("listings.id"), nullable=False, index=True)
@@ -38,7 +38,7 @@ class Deposit(Base):  # deposit
     settle_hash = Column(String(66), nullable=True)
     settle_tx = Column(String(66), nullable=True)
     network = Column(String(24), nullable=True)
-class LedgerEntry(Base):  # ledger block
+class LedgerEntry(Base):
     __tablename__ = "ledger_entries"
     seq = Column(Integer, primary_key=True, autoincrement=True)
     deposit_id = Column(String(16), index=True, nullable=False)
@@ -49,7 +49,7 @@ class LedgerEntry(Base):  # ledger block
     entry_hash = Column(String(66), unique=True, index=True, nullable=False)
     chain_tx = Column(String(66), nullable=True)
     created_at = Column(DateTime, default=utcnow)
-class ConditionPhoto(Base):  # room photo
+class ConditionPhoto(Base):
     __tablename__ = "condition_photos"
     id = Column(String(36), primary_key=True)
     deposit_id = Column(String(16), ForeignKey("deposits.id"), nullable=False, index=True)

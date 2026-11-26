@@ -7,7 +7,7 @@ import "./IdentityRegistry.sol";
 import "./ArbitratorRegistry.sol";
 import "./DepositVault.sol";
 
-contract TenancyFactory is Ownable { // tenancy factory
+contract TenancyFactory is Ownable {
     using Clones for address;
 
     address public immutable vaultImplementation;

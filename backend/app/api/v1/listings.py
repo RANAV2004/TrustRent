@@ -22,11 +22,11 @@ MAX_PHOTOS = 8
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 PHOTO_FORMATS = {"JPEG": (".jpg", "image/jpeg"), "PNG": (".png", "image/png"), "WEBP": (".webp", "image/webp")}
-def image_format(content: bytes) -> tuple[str, str] | None:  # photos are public: only real images are served
+def image_format(content: bytes) -> tuple[str, str] | None:
     try:
-        with Image.open(io.BytesIO(content)) as img:  # reads the header: rejects HTML or scripts named .png
+        with Image.open(io.BytesIO(content)) as img:
             return PHOTO_FORMATS.get(img.format or "")
-    except Exception:  # noqa: BLE001 - any decode error means "not a photo"
+    except Exception:  # noqa: BLE001
         return None
 class ListingIn(BaseModel):
     title: str = Field(min_length=8, max_length=120)
@@ -63,7 +63,7 @@ async def _confirmed_listing_ids(db: AsyncSession, seeker_id: str) -> set[str]:
         .where(Conversation.seeker_id == seeker_id, Message.kind == "visit", Message.visit_status == "accepted")
     )
     return set(await db.scalars(stmt))
-@router.get("/listings")  # listings
+@router.get("/listings")
 async def list_listings(request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = list(await db.scalars(select(Listing).where(Listing.status == "live").order_by(Listing.listed_at.desc())))
     owners = await _owners(db, {r.owner_id for r in rows})
@@ -71,7 +71,7 @@ async def list_listings(request: Request, user: User = Depends(get_current_user)
     confirmed = await _confirmed_listing_ids(db, user.id)
     base = str(request.base_url)
     return [listing_out(r, owners.get(r.owner_id), exact=r.owner_id == user.id or r.id in confirmed, base_url=base) for r in rows]
-@router.get("/listings/{listing_id}")  # listing
+@router.get("/listings/{listing_id}")
 async def get_listing(listing_id: str, request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     row = await db.get(Listing, listing_id)
     if not row or (row.status != "live" and row.owner_id != user.id):
@@ -85,11 +85,11 @@ async def require_approved_owner(user: User, db: AsyncSession) -> None:
     app = await db.get(OwnerApplication, user.id)
     if user.is_lawyer or not app or app.status != "approved":
         raise field_error("Get verified as an owner before listing a home.", None, status.HTTP_403_FORBIDDEN)
-@router.get("/owner/listings")  # my listings
+@router.get("/owner/listings")
 async def my_listings(request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = await db.scalars(select(Listing).where(Listing.owner_id == user.id, Listing.status != "removed").order_by(Listing.listed_at.desc()))
     return [listing_out(r, user, exact=True, base_url=str(request.base_url)) for r in rows]
-@router.post("/owner/listings", status_code=201)  # add listing
+@router.post("/owner/listings", status_code=201)
 async def create_listing(
     request: Request,
     data: str = Form(..., description="ListingIn as JSON"),
@@ -129,7 +129,7 @@ async def create_listing(
     await db.commit()
     await db.refresh(row)
     return listing_out(row, user, exact=True, base_url=str(request.base_url))
-@router.patch("/owner/listings/{listing_id}")  # listing status
+@router.patch("/owner/listings/{listing_id}")
 async def set_status(listing_id: str, body: StatusIn, request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     row = await db.get(Listing, listing_id)
     if not row or row.owner_id != user.id or row.status == "removed":
@@ -142,7 +142,7 @@ async def set_status(listing_id: str, body: StatusIn, request: Request, user: Us
     row.status = body.status
     await db.commit()
     return listing_out(row, user, exact=True, base_url=str(request.base_url))
-@router.delete("/owner/listings/{listing_id}", status_code=204)  # delete listing
+@router.delete("/owner/listings/{listing_id}", status_code=204)
 async def delete_listing(listing_id: str, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     row = await db.get(Listing, listing_id)
     if not row or row.owner_id != user.id:

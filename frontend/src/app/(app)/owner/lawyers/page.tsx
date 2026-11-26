@@ -64,7 +64,7 @@ function Hire({ lawyer, listings, onClose }: { lawyer: LawyerCard; listings: { i
   );
 }
 
-export default function OwnerLawyers() { // owner lawyers
+export default function OwnerLawyers() {
   const { user } = useAuth();
   const uid = user?.id ?? "";
   const myListings = useStore(() => ownerListingsFor(uid), [uid]);

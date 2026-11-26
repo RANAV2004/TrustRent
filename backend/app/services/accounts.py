@@ -37,7 +37,7 @@ def is_admin(user: User) -> bool:
     return (user.email or "").lower() in {e.lower() for e in settings.ADMIN_EMAILS}
 def two_factor_required() -> bool:
     return settings.ADMIN_TWO_FACTOR != "optional"
-def admin_unlocked(user: User) -> bool:  # an admin whose sign-in meets the two-step rules
+def admin_unlocked(user: User) -> bool:
     if not is_admin(user):
         return False
     if user.totp_enabled_at:

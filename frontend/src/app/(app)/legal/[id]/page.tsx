@@ -76,7 +76,7 @@ function Share({ doc, contacts, onDone }: { doc: AgreementDoc; contacts: Contact
   );
 }
 
-export default function CasePage({ params }: { params: Promise<{ id: string }> }) { // legal case
+export default function CasePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
   const [c, setC] = useState<CaseDetail | null>(null);

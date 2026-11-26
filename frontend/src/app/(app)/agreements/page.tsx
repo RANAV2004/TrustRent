@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { apiMode } from "@/lib/api";
 import { downloadAgreement, fileSize, SharedAgreement, sharedWithMe } from "@/lib/legal";
 
-export default function AgreementsPage() { // tenant agreements
+export default function AgreementsPage() {
   const [docs, setDocs] = useState<SharedAgreement[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {

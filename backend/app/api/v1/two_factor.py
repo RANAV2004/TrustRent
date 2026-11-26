@@ -1,9 +1,3 @@
-"""Two-step sign-in for admins: password (or Google), then a 6-digit code from an authenticator app.
-
-Turning it off is deliberately not possible from the website, so a stolen session can't remove it.
-If an admin loses both their phone and their recovery codes, the server operator runs
-`python scripts/reset_admin_2fa.py <email>` (see Docs/GO_LIVE.md).
-"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,21 +14,17 @@ from app.services.monitoring import alert
 
 router = APIRouter(prefix="/auth/2fa", tags=["Two-step sign-in"])
 
-
 class VerifyIn(BaseModel):
     challenge: str = Field(max_length=2000)
     code: str = Field(max_length=20)
 
-
 class CodeIn(BaseModel):
     code: str = Field(max_length=20)
-
 
 def _admin(user: User) -> User:
     if not is_admin(user):
         raise HTTPException(status_code=403, detail="Admins only")
     return user
-
 
 def _use_recovery_code(user: User, code: str) -> bool:
     wanted = totp.normalise_recovery(code)
@@ -42,18 +32,16 @@ def _use_recovery_code(user: User, code: str) -> bool:
         return False
     for stored in user.recovery_codes or []:
         if verify_secret(wanted, stored):
-            user.recovery_codes = [c for c in user.recovery_codes if c != stored]  # one use each
+            user.recovery_codes = [c for c in user.recovery_codes if c != stored]
             return True
     return False
-
 
 def _issue_recovery_codes(user: User) -> list[str]:
     codes = totp.new_recovery_codes()
     user.recovery_codes = [hash_secret(c) for c in codes]
     return codes
 
-
-@router.post("/verify")  # second step of sign-in
+@router.post("/verify")
 async def verify(body: VerifyIn, db: AsyncSession = Depends(get_db)):
     payload = decode_access_token(body.challenge)
     if not payload or payload.get("purpose") != "2fa":
@@ -78,8 +66,7 @@ async def verify(body: VerifyIn, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
     return session(user, mfa=True)
 
-
-@router.post("/setup")  # show the QR code
+@router.post("/setup")
 async def setup(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     _admin(user)
     if user.totp_enabled_at:
@@ -90,8 +77,7 @@ async def setup(user: User = Depends(get_current_user), db: AsyncSession = Depen
     uri = totp.otpauth_uri(secret, user.email)
     return {"secret": secret, "otpauthUri": uri, "qrSvg": totp.qr_svg(uri)}
 
-
-@router.post("/enable")  # confirm the first code
+@router.post("/enable")
 async def enable(body: CodeIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     _admin(user)
     if user.totp_enabled_at:
@@ -108,8 +94,7 @@ async def enable(body: CodeIn, user: User = Depends(get_current_user), db: Async
     await db.refresh(user)
     return session(user, mfa=True) | {"recoveryCodes": codes}
 
-
-@router.post("/recovery-codes")  # replace the recovery codes
+@router.post("/recovery-codes")
 async def new_recovery_codes(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     _admin(user)
     if not user.totp_enabled_at or not admin_unlocked(user):

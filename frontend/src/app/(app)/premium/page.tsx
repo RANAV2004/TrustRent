@@ -198,7 +198,7 @@ function Premium() {
     </div>
   );
 }
-export default function PremiumPage() { // premium
+export default function PremiumPage() {
   return (
     <Suspense>
       <Premium />

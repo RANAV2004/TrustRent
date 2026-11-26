@@ -36,7 +36,7 @@ function SignInSecurity() {
     </section>
   );
 }
-export default function AdminOverviewPage() { // admin overview
+export default function AdminOverviewPage() {
   const [o, setO] = useState<AdminOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { getOverview().then(setO, (e) => setError(e.message)); }, []);

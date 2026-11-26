@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ConditionPhoto, ConditionSet, getPhotos, photoBlobUrl, Stage, STAGE_LABEL, uploadPhoto } from "@/lib/condition";
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" });
-function Thumb({ depositId, p }: { depositId: string; p: ConditionPhoto }) { // photo tile
+function Thumb({ depositId, p }: { depositId: string; p: ConditionPhoto }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   useEffect(() => {
@@ -36,7 +36,7 @@ function Thumb({ depositId, p }: { depositId: string; p: ConditionPhoto }) { // 
     </figure>
   );
 }
-function UploadForm({ depositId, set, onAdded }: { depositId: string; set: ConditionSet; onAdded: (p: ConditionPhoto) => void }) { // add photos
+function UploadForm({ depositId, set, onAdded }: { depositId: string; set: ConditionSet; onAdded: (p: ConditionPhoto) => void }) {
   const open = (Object.keys(set.canUpload) as Stage[]).filter((s) => set.canUpload[s]);
   const [stage, setStage] = useState<Stage>(open[0]);
   const [room, setRoom] = useState(set.rooms[0]);
@@ -97,7 +97,7 @@ function UploadForm({ depositId, set, onAdded }: { depositId: string; set: Condi
     </form>
   );
 }
-export function ConditionPhotos({ depositId }: { depositId: string }) { // room photos
+export function ConditionPhotos({ depositId }: { depositId: string }) {
   const [open, setOpen] = useState(false);
   const [set, setSet] = useState<ConditionSet | null>(null);
   const [error, setError] = useState<string | null>(null);

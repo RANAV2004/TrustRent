@@ -16,7 +16,7 @@ async def get_current_user(
     payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    if payload.get("purpose"):  # a half-finished sign-in (waiting for the authenticator code) is not a session
+    if payload.get("purpose"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     user_id = payload.get("sub")
     stmt = select(User).where(User.id == user_id)
@@ -27,7 +27,7 @@ async def get_current_user(
     changed = user.password_changed_at
     if changed and float(payload.get("iat", 0)) < changed.replace(tzinfo=timezone.utc).timestamp():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Your password was changed. Sign in again.")
-    user._mfa = bool(payload.get("mfa"))  # this sign-in passed the authenticator check
+    user._mfa = bool(payload.get("mfa"))
     if user.banned_at or user.deleted_at:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has been suspended. Contact TrustRent support.")
     return user

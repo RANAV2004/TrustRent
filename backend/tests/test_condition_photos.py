@@ -5,7 +5,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.deposits import ConditionPhoto
 from tests.test_live_features import admin_headers, verified_tenant_with_visit
 from tests.test_marketplace import owner_with_listing, signup
-def jpeg_with_gps() -> bytes:  # test photo
+def jpeg_with_gps() -> bytes:
     img = Image.new("RGB", (64, 48), (200, 120, 40))
     exif = Image.Exif()
     exif[0x8825] = {2: (22, 43, 0), 4: (75, 53, 0)}

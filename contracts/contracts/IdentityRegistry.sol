@@ -3,7 +3,7 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract IdentityRegistry is AccessControl { // identity
+contract IdentityRegistry is AccessControl {
     bytes32 public constant ATTESTER_ROLE = keccak256("ATTESTER_ROLE");
 
     struct Attestation {

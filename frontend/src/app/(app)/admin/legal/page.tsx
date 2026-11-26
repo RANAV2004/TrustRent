@@ -136,7 +136,7 @@ function LawyerRow({ l, onCredentials, reload }: { l: AdminLawyer; onCredentials
   );
 }
 
-export default function AdminLegal() { // admin legal
+export default function AdminLegal() {
   const [data, setData] = useState<{ applications: LawyerApplicationRow[]; lawyers: AdminLawyer[]; cases: AdminLegalCase[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("applications");
