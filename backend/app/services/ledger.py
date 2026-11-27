@@ -9,7 +9,7 @@ from app.services.accounts import iso
 from app.services.hash_service import HashService
 from app.services.monitoring import alert
 GENESIS = "0x" + "0" * 64
-LEDGER_LOCK_KEY = 7472757374  # postgres advisory lock id for appending to the chain
+LEDGER_LOCK_KEY = 7472757374
 log = logging.getLogger(__name__)
 def fingerprint(data: dict) -> str:
     return HashService.hash_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
@@ -22,7 +22,7 @@ def settlement_details(d: Deposit) -> dict:
 def _entry_hash(prev: str, kind: str, deposit_id: str, data_hash: str, amounts: dict, at: str) -> str:
     return HashService.hash_text("|".join([prev, kind, deposit_id, data_hash, json.dumps(amounts, sort_keys=True), at]))
 async def _append(db: AsyncSession, deposit_id: str, kind: str, data_hash: str, amounts: dict) -> LedgerEntry:
-    if db.get_bind().dialect.name == "postgresql":  # two writers reading the same tip would fork the chain for good
+    if db.get_bind().dialect.name == "postgresql":
         await db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": LEDGER_LOCK_KEY})
     last = await db.scalar(select(LedgerEntry).order_by(LedgerEntry.seq.desc()).limit(1))
     prev = last.entry_hash if last else GENESIS
@@ -35,7 +35,7 @@ async def _append(db: AsyncSession, deposit_id: str, kind: str, data_hash: str, 
 async def record_deposit(db: AsyncSession, d: Deposit) -> None:
     d.record_hash = fingerprint(deposit_details(d))
     entry = await _append(db, d.id, "deposit", d.record_hash, {"amount": d.amount})
-    try:  # a blockchain outage must never block a paid deposit: the ledger entry is the fallback receipt
+    try:
         tx = await chain.record_deposit(d.id, d.amount, d.record_hash)
     except Exception:  # noqa: BLE001
         log.exception("Recording deposit %s on-chain failed; keeping the ledger receipt", d.id)
@@ -49,8 +49,8 @@ async def record_settlement(db: AsyncSession, d: Deposit) -> None:
     d.settle_hash = fingerprint(settlement_details(d))
     entry = await _append(db, d.id, "settlement", d.settle_hash, {"deducted": d.deducted, "refunded": d.refunded})
     tx = None
-    if d.network and d.network != "trustrent-ledger":  # only deposits recorded on-chain can be settled there
-        try:  # runs after the refund was sent, so it must not undo the settlement
+    if d.network and d.network != "trustrent-ledger":
+        try:
             tx = await chain.settle_deposit(d.id, d.deducted, d.refunded, d.settle_hash)
         except Exception:  # noqa: BLE001
             log.exception("Settling deposit %s on-chain failed; keeping the ledger receipt", d.id)
@@ -61,7 +61,7 @@ async def record_settlement(db: AsyncSession, d: Deposit) -> None:
 def photo_details(p: ConditionPhoto) -> dict:
     return {"photoId": p.id, "depositId": p.deposit_id, "side": p.side, "stage": p.stage, "room": p.room,
             "fileHash": p.file_hash, "uploadedAt": iso(p.created_at)}
-async def record_photo(db: AsyncSession, p: ConditionPhoto) -> None:  # photo block
+async def record_photo(db: AsyncSession, p: ConditionPhoto) -> None:
     p.record_hash = fingerprint(photo_details(p))
     entry = await _append(db, p.deposit_id, "photo", p.record_hash, {})
     p.record_tx = entry.entry_hash

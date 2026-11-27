@@ -24,7 +24,6 @@ export function Screenshots({ ticketNo, images }: { ticketNo: string; images: Ti
   return <div className="flex flex-wrap gap-2">{images.map((i) => <Thumb key={i.id} ticketNo={ticketNo} image={i} />)}</div>;
 }
 
-// Picks up to 5 screenshots and shows them before sending.
 export function ImagePicker({ files, onChange, id = "images" }: { files: File[]; onChange: (f: File[]) => void; id?: string }) {
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);

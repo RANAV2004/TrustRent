@@ -67,7 +67,7 @@ function LoginForm() {
       const u = await action();
       router.replace(afterSignIn(u, next));
     } catch (err) {
-      if (err instanceof TwoFactorRequired) return setChallenge(err.challenge); // keep signingIn: the next step finishes it
+      if (err instanceof TwoFactorRequired) return setChallenge(err.challenge);
       signingIn.current = false;
       setError(err instanceof AuthError ? err.message : "Could not sign you in. Try again.");
     } finally {
@@ -144,7 +144,7 @@ function LoginForm() {
     </AuthFrame>
   );
 }
-export default function LoginPage() { // user login
+export default function LoginPage() {
   return (
     <Suspense>
       <LoginForm />

@@ -21,7 +21,7 @@ function defaultSlot(daysAhead: number, hour: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(hour)}:00`;
 }
-export default function ListingPage({ params }: { params: Promise<{ id: string }> }) { // listing
+export default function ListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
   const router = useRouter();

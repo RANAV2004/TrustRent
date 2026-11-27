@@ -6,7 +6,7 @@ import { AuthFrame, FormError, PasswordField, SecondaryLink, SubmitButton, TextF
 import { AuthError } from "@/lib/auth";
 import { afterSignIn, useAuth } from "@/lib/auth-context";
 
-export default function LawyerLoginPage() { // lawyer sign in
+export default function LawyerLoginPage() {
   const { user, ready, signIn, signOut } = useAuth();
   const router = useRouter();
   const [identifier, setIdentifier] = useState("");
@@ -25,7 +25,7 @@ export default function LawyerLoginPage() { // lawyer sign in
     signingIn.current = true;
     try {
       const u = await signIn(identifier, password);
-      if (u.accountType !== "lawyer") { // a tenant or owner account: send them to the normal sign-in
+      if (u.accountType !== "lawyer") {
         await signOut();
         signingIn.current = false;
         setError("This isn't a lawyer account. Use the main sign-in page instead.");

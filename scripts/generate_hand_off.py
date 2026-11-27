@@ -4,7 +4,6 @@ import shutil
 import sys
 from pathlib import Path
 
-
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR / "backend"))
 
@@ -27,7 +26,7 @@ def generate_hand_offs():
     print("2. Copying ABIs...")
     artifacts_dir = ROOT_DIR / "contracts" / "artifacts" / "contracts"
     contract_names = ["DepositVault", "TenancyFactory", "IdentityRegistry", "ArbitratorRegistry", "MockINR"]
-    
+
     for name in contract_names:
         json_file = artifacts_dir / f"{name}.sol" / f"{name}.json"
         if json_file.exists():
@@ -64,7 +63,7 @@ def generate_hand_offs():
     error_md = ["# TrustRent Error Catalog for Frontend UI Mapping\n\n| Error Code | Revert Name | User-Facing Plain Title | Plain Language Message |\n|---|---|---|---|"]
     for name, item in ERROR_CATALOG.items():
         error_md.append(f"| `{item['code']}` | `{name}` | **{item['title']}** | {item['message']} |")
-    
+
     with open(HAND_OFF_DIR / "error_catalog.md", "w", encoding="utf-8") as f:
         f.write("\n".join(error_md))
 
@@ -88,8 +87,8 @@ This matrix defines what information and user action buttons must be rendered on
     print("7. Generating Interface Freeze v1.0...")
     freeze_md = """# TrustRent Interface Freeze v1.0
 
-**Effective Date:** October 27, 2026  
-**Status:** FROZEN v1.0  
+**Effective Date:** October 27, 2026
+**Status:** FROZEN v1.0
 **Scope:** Smart Contract ABIs, OpenAPI REST Specification, Subgraph GraphQL Schema, and Error Catalog.
 
 ### Change Management Policy

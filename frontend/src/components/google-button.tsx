@@ -11,7 +11,7 @@ declare global {
   }
 }
 const SRC = "https://accounts.google.com/gsi/client";
-export function GoogleButton({ onCredential }: { onCredential: (credential: string) => void }) { // google button
+export function GoogleButton({ onCredential }: { onCredential: (credential: string) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const cb = useRef(onCredential);
   useEffect(() => {

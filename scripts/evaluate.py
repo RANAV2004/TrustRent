@@ -66,7 +66,7 @@ def main():
     print("================================================================================")
     print("                    TrustRent System Evaluation Benchmark                       ")
     print("================================================================================")
-    
+
     print("\n--- 1. Smart Contract Gas Consumption per Operation ---")
     print(f"{'Operation':<45} | {'Gas Used':<10} | {'Optimization Notes'}")
     print("-" * 80)

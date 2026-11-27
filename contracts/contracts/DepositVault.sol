@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./IdentityRegistry.sol";
 import "./ArbitratorRegistry.sol";
 
-contract DepositVault is ReentrancyGuard { // deposit vault
+contract DepositVault is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum State {

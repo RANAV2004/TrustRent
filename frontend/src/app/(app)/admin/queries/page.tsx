@@ -7,14 +7,14 @@ import { adminTickets, TicketStatus, TicketSummary, when } from "@/lib/support";
 
 const FILTERS: [TicketStatus | "", string][] = [["open", "Open"], ["in_progress", "In progress"], ["closed", "Closed"], ["", "All"]];
 
-export default function AdminQueries() { // admin queries
+export default function AdminQueries() {
   const [filter, setFilter] = useState<TicketStatus | "">("open");
   const [q, setQ] = useState("");
   const [data, setData] = useState<{ tickets: TicketSummary[]; counts: Record<TicketStatus, number> } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(() => { adminTickets(filter, q).then(setData, (e) => setError(e.message)); }, [filter, q]);
   useEffect(() => {
-    const t = window.setTimeout(load, q ? 300 : 0); // wait for typing to pause
+    const t = window.setTimeout(load, q ? 300 : 0);
     return () => window.clearTimeout(t);
   }, [load, q]);
   return (

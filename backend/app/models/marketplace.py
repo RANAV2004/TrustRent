@@ -3,7 +3,7 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integ
 from app.core.database import Base
 def utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
-class Listing(Base):  # listing
+class Listing(Base):
     __tablename__ = "listings"
     id = Column(String(16), primary_key=True)
     owner_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
@@ -35,7 +35,7 @@ class Listing(Base):  # listing
     disputes_lost = Column(Integer, default=0)
     listed_at = Column(DateTime, default=utcnow)
     listed_days_ago = Column(Integer, nullable=True)
-class OwnerApplication(Base):  # owner verify
+class OwnerApplication(Base):
     __tablename__ = "owner_applications"
     user_id = Column(String(36), ForeignKey("users.id"), primary_key=True)
     status = Column(String(12), default="submitted")
@@ -55,7 +55,7 @@ class OwnerApplication(Base):  # owner verify
     reviewed_at = Column(DateTime, nullable=True)
     reviewed_by = Column(String(36), nullable=True)
     review_note = Column(String(500), nullable=True)
-class Conversation(Base):  # chat
+class Conversation(Base):
     __tablename__ = "conversations"
     id = Column(String(36), primary_key=True)
     listing_id = Column(String(16), ForeignKey("listings.id"), nullable=False, index=True)
@@ -65,7 +65,7 @@ class Conversation(Base):  # chat
     updated_at = Column(DateTime, default=utcnow)
     seeker_last_read = Column(DateTime, nullable=True)
     owner_last_read = Column(DateTime, nullable=True)
-class Message(Base):  # message
+class Message(Base):
     __tablename__ = "messages"
     id = Column(String(36), primary_key=True)
     conversation_id = Column(String(36), ForeignKey("conversations.id"), nullable=False, index=True)
@@ -76,13 +76,13 @@ class Message(Base):  # message
     visit_status = Column(String(10), nullable=True)
     accepted_slot = Column(String(40), nullable=True)
     created_at = Column(DateTime, default=utcnow)
-class EmailVerification(Base):  # email code
+class EmailVerification(Base):
     __tablename__ = "email_verification_codes"
     email = Column(String(255), primary_key=True)
     code_hash = Column(String(128), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     attempts = Column(Integer, default=0)
-class IdentitySubmission(Base):  # id document
+class IdentitySubmission(Base):
     __tablename__ = "identity_submissions"
     id = Column(String(36), primary_key=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)

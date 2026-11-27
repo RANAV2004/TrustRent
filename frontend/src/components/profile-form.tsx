@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { AuthError, ProfileInput, validatePassword, validateProfile } from "@/lib/auth";
 import { CountrySelect, FormError, PasswordField, PhoneField, SubmitButton, TextField } from "./auth-ui";
 type Values = ProfileInput & { password: string; confirm: string };
-export function ProfileForm({ // profile form
+export function ProfileForm({
   initial,
   withPassword,
   submitLabel,

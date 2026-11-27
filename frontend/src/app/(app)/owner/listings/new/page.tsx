@@ -31,7 +31,7 @@ function Field({ label, children, hint }: { label: string; children: ReactNode; 
   );
 }
 const input = "rounded-lg border border-line px-3 py-2.5 focus:border-vault focus:outline-none";
-export default function NewListing() { // add listing
+export default function NewListing() {
   const { user } = useAuth();
   const router = useRouter();
   const uidv = user?.id ?? "";

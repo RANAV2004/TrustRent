@@ -195,7 +195,7 @@ function Inbox() {
     </div>
   );
 }
-export default function MessagesPage() { // messages
+export default function MessagesPage() {
   return (
     <Suspense>
       <Inbox />

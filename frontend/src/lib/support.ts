@@ -39,7 +39,6 @@ export const adminTickets = (status: string, q: string) =>
 export const setTicketStatus = (no: string, status: TicketStatus, note: string) =>
   api<Ticket>(`/admin/support/${encodeURIComponent(no)}/status`, { json: { status, note } });
 
-// Screenshots need the sign-in token, so they're fetched and shown from memory.
 export function useTicketImage(ticketNo: string, imageId: string): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {

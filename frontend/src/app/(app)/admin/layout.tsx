@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">The admin console is only for TrustRent admins{apiMode ? "" : " and needs the backend"}.</p>;
   }
   const tf = user.twoFactor;
-  if (tf?.enabled && !tf.verified) { // a session from before two-step sign-in was turned on
+  if (tf?.enabled && !tf.verified) {
     return (
       <section className="mx-auto flex max-w-md flex-col gap-3 rounded-2xl border border-line bg-surface p-6">
         <h1 className="text-xl">Sign in again</h1>

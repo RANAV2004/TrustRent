@@ -1,4 +1,3 @@
-"""Replays each reported attack and checks that it is now blocked."""
 import io
 import uuid
 from sqlalchemy import delete, select, update
@@ -14,14 +13,12 @@ from tests.test_marketplace import owner_with_listing, profile, signup, tag
 
 ADMIN = "admin@trustrent.in"
 
-
 async def make_arbitrator(client):
     user, headers = await signup(client)
     async with AsyncSessionLocal() as db:
         await db.execute(update(User).where(User.id == user["id"]).values(role=UserRole.ARBITRATOR))
         await db.commit()
     return user, headers
-
 
 async def pending_id(client, monkeypatch, headers, name="id.jpg", data=b"\xff\xd8\xffid-bytes"):
     monkeypatch.setattr(settings, "DEMO_MODE", False)
@@ -30,11 +27,9 @@ async def pending_id(client, monkeypatch, headers, name="id.jpg", data=b"\xff\xd
     assert res.status_code == 200
     return res
 
-
 async def submissions(client, ah, user_id):
     rows = (await client.get("/api/v1/admin/verifications", headers=ah)).json()["identities"]
     return [r for r in rows if r["userId"] == user_id]
-
 
 async def test_arbitrator_cannot_open_documents_or_approve(client, monkeypatch):
     ah = await admin_headers(client)
@@ -53,15 +48,12 @@ async def test_arbitrator_cannot_open_documents_or_approve(client, monkeypatch):
                               json={"approve": True})).status_code == 403
     assert (await client.get("/api/v1/admin/verifications", headers=uh)).status_code == 403
 
-
 async def test_owner_cannot_self_approve_outside_demo_mode(client, monkeypatch):
     owner, oh = await signup(client, "owner")
     monkeypatch.setattr(settings, "DEMO_MODE", False)
     res = await client.post(f"/api/v1/owner/application/{owner['id']}/review", headers=oh, json={"approve": True})
     assert res.status_code == 403
 
-
-# 4. email change to the admin address
 async def test_cannot_change_email_to_admin(client):
     await admin_headers(client)
     user, uh = await signup(client)
@@ -73,13 +65,11 @@ async def test_cannot_change_email_to_admin(client):
     me = (await client.get("/api/v1/users/me", headers=uh)).json()["user"]
     assert me["email"] != ADMIN and me["isAdmin"] is False
     other = await client.put("/api/v1/users/me", headers=uh, json=body | {"email": f"new_{t}@example.com"})
-    assert other.status_code == 400 and other.json()["detail"]["field"] == "email"  # unverified emails can't be swapped in
-
+    assert other.status_code == 400 and other.json()["detail"]["field"] == "email"
 
 async def test_cannot_sign_up_with_admin_email(client):
     res = await client.post("/api/v1/auth/signup/email-code", json=profile(tag()) | {"email": ADMIN})
     assert res.status_code == 409
-
 
 async def test_admin_can_keep_own_email(client):
     ah = await admin_headers(client)
@@ -87,7 +77,6 @@ async def test_admin_can_keep_own_email(client):
     body = {"firstName": "TrustRent", "lastName": "Admin", "username": "admin", "email": ADMIN,
             "phone": me["phone"], "country": "India"}
     assert (await client.put("/api/v1/users/me", headers=ah, json=body)).status_code == 200
-
 
 async def test_demo_google_cannot_take_over_accounts(client):
     await admin_headers(client)
@@ -100,12 +89,10 @@ async def test_demo_google_cannot_take_over_accounts(client):
     assert (await client.post("/api/v1/auth/google", json={"email": email})).status_code == 200
     assert (await client.post("/api/v1/auth/google", json={"email": "not-an-email"})).status_code == 400
 
-
 async def test_google_off_without_client_id_in_live_mode(client, monkeypatch):
     monkeypatch.setattr(settings, "DEMO_MODE", False)
     monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "")
     assert (await client.post("/api/v1/auth/google", json={"email": "x@gmail.com"})).status_code == 501
-
 
 async def test_admin_is_seeded_in_live_mode(client, monkeypatch):
     monkeypatch.setattr(settings, "DEMO_MODE", False)
@@ -118,16 +105,14 @@ async def test_admin_is_seeded_in_live_mode(client, monkeypatch):
     res = await client.post("/api/v1/auth/password-login", json={"identifier": ADMIN, "password": settings.DEMO_ADMIN_PASSWORD})
     assert res.status_code == 200
 
-
-# uploaded HTML must not render in the admin's browser
 async def test_documents_never_render_html(client, monkeypatch):
     ah = await admin_headers(client)
     applicant, uh = await signup(client)
     monkeypatch.setattr(settings, "DEMO_MODE", False)
     raw = await client.post("/api/v1/users/me/identity", headers=uh, data={"docType": "PAN card"},
                             files={"file": ("evil.html", io.BytesIO(b"<script>alert(1)</script>"), "image/jpeg")})
-    assert raw.status_code == 400 and raw.json()["detail"]["field"] == "file"  # not a photo or PDF
-    await pending_id(client, monkeypatch, uh, name="evil.html", data=b"%PDF-<script>alert(1)</script>")  # disguised
+    assert raw.status_code == 400 and raw.json()["detail"]["field"] == "file"
+    await pending_id(client, monkeypatch, uh, name="evil.html", data=b"%PDF-<script>alert(1)</script>")
     sub = (await submissions(client, ah, applicant["id"]))[0]
     res = await client.get(f"/api/v1/admin/identity/{sub['id']}/file", headers=ah)
     assert res.status_code == 200
@@ -145,7 +130,6 @@ async def test_documents_never_render_html(client, monkeypatch):
                               json={"approve": True})).status_code == 404
     assert (await client.get(f"/api/v1/admin/owner-applications/{uuid.uuid4()}/id", headers=ah)).status_code == 404
 
-
 async def test_owner_documents_for_admin(client):
     ah = await admin_headers(client)
     owner, _, _ = await owner_with_listing(client)
@@ -155,8 +139,6 @@ async def test_owner_documents_for_admin(client):
     assert deed.headers["content-type"] == "application/pdf"
     assert (await client.get(f"/api/v1/admin/owner-applications/{owner['id']}/other", headers=ah)).status_code == 404
 
-
-# rejecting a second ID keeps an earlier approval
 async def test_reject_keeps_earlier_approval(client, monkeypatch):
     ah = await admin_headers(client)
     applicant, uh = await signup(client)
@@ -171,8 +153,6 @@ async def test_reject_keeps_earlier_approval(client, monkeypatch):
     await client.post(f"/api/v1/admin/identity/{first['id']}/review", headers=ah, json={"approve": False})
     assert (await client.get("/api/v1/users/me", headers=uh)).json()["user"]["idVerified"] is False
 
-
-# double deposit and deleted listing
 async def test_second_paid_order_does_not_create_second_deposit(client):
     owner, oh, listing = await owner_with_listing(client)
     _, th = await verified_tenant_with_visit(client, listing, oh)
@@ -191,7 +171,6 @@ async def test_second_paid_order_does_not_create_second_deposit(client):
     blocked = await client.post("/api/v1/payments/order", headers=th, json={"purpose": "deposit", "listingId": listing["id"]})
     assert blocked.status_code == 409
 
-
 async def test_paying_for_deleted_listing_does_not_crash(client):
     owner, oh, listing = await owner_with_listing(client)
     _, th = await verified_tenant_with_visit(client, listing, oh)
@@ -205,7 +184,6 @@ async def test_paying_for_deleted_listing_does_not_crash(client):
         await db.commit()
     res = await client.post("/api/v1/payments/verify", headers=th, json={"orderId": order["orderId"]})
     assert res.status_code == 409 and "no longer listed" in res.json()["detail"]["message"]
-
 
 async def test_payment_edge_cases(client, monkeypatch):
     _, uh = await signup(client)
@@ -222,7 +200,6 @@ async def test_payment_edge_cases(client, monkeypatch):
     assert (await client.post("/api/v1/payments/verify", headers=uh, json={"orderId": order["orderId"]})).status_code == 400
     assert (await client.post("/api/v1/payments/order", headers=uh, json={"purpose": "premium", "planId": "week"})).status_code == 503
 
-
 async def test_owner_cannot_pay_deposit_on_own_home(client):
     owner, oh, listing = await owner_with_listing(client)
     await client.post("/api/v1/users/me/identity", headers=oh, data={"docType": "Passport"},
@@ -230,22 +207,16 @@ async def test_owner_cannot_pay_deposit_on_own_home(client):
     res = await client.post("/api/v1/payments/order", headers=oh, json={"purpose": "deposit", "listingId": listing["id"]})
     assert res.status_code == 400
 
-
-# tokens and secrets
 async def test_token_for_deleted_user_is_401(client):
     token = create_access_token(subject=str(uuid.uuid4()))
     res = await client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 401
     assert (await client.get("/api/v1/users/me", headers={"Authorization": "Bearer junk"})).status_code == 401
 
-
 def test_jwt_secret_is_never_a_known_default():
     assert settings.JWT_SECRET not in UNSAFE_JWT_SECRETS and len(settings.JWT_SECRET) >= 32
     assert settings.DEBUG is False
 
-
-
-# the old prototype endpoints are gone for good
 async def test_retired_prototype_endpoints_are_gone(client):
     _, uh = await signup(client)
     for method, path in [("post", "/auth/login"), ("get", "/auth/me"), ("post", "/identity/verify"), ("post", "/tenancies/draft"),

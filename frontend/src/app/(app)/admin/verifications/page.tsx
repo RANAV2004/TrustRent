@@ -71,7 +71,7 @@ function IdRow({ r, reload }: { r: IdRequest; reload: () => void }) {
     </li>
   );
 }
-export default function VerificationsPage() { // admin verify
+export default function VerificationsPage() {
   const [data, setData] = useState<{ owners: OwnerRequest[]; identities: IdRequest[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const reload = useCallback(() => { getVerifications().then(setData, (e) => setError(e.message)); }, []);

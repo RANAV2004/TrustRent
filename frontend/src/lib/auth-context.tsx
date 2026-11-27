@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const expired = () => {
       clearApiCache();
-      setUser(null); // RequireAuth then sends the user to /login
+      setUser(null);
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, expired);
     return () => {

@@ -89,7 +89,7 @@ function Reply({ t, onSent }: { t: Ticket; onSent: (t: Ticket) => void }) {
   );
 }
 
-export default function TicketPage({ params }: { params: Promise<{ ticket: string }> }) { // ticket
+export default function TicketPage({ params }: { params: Promise<{ ticket: string }> }) {
   const { ticket } = use(params);
   const [t, setT] = useState<Ticket | null>(null);
   const [error, setError] = useState<string | null>(null);

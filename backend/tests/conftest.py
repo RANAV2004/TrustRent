@@ -6,7 +6,7 @@ os.environ["STORAGE_LOCAL_DIR"] = os.path.join(_tmp, "storage")
 os.environ["MEDIA_DIR"] = os.path.join(_tmp, "media")
 os.environ["DEBUG"] = "false"
 os.environ["DEMO_ADMIN_PASSWORD"] = "test-admin-password"
-os.environ["ADMIN_TWO_FACTOR"] = "optional"  # test_two_factor.py switches it on
+os.environ["ADMIN_TWO_FACTOR"] = "optional"
 import pytest  # noqa: E402
 from app.core.database import engine, Base  # noqa: E402
 import app.models  # noqa: E402,F401
@@ -33,7 +33,7 @@ def outbox(monkeypatch):
     monkeypatch.setattr("app.api.v1.accounts.send_reset_email", fake_reset)
     from tests.mailbox import MAILS
     MAILS.clear()
-    async def fake_message(msg):  # notifications, alerts, lawyer emails: never reach a real mail server
+    async def fake_message(msg):
         MAILS.append({"to": msg["To"], "subject": msg["Subject"], "body": msg.get_content()})
     monkeypatch.setattr("app.services.mailer.send_message_email", fake_message)
     return sent

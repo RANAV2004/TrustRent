@@ -32,7 +32,7 @@ function Icon({ d }: { d: string }) {
     </svg>
   );
 }
-export function AdminShell({ children }: { children: ReactNode }) { // admin shell
+export function AdminShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
   const router = useRouter();

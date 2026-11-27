@@ -5,13 +5,13 @@ import { formatINR } from "@/lib/format";
 import {
   AMENITY_LABEL, depositMonths, earlyAccessHoursLeft, Listing, photoTone, trustLine,
 } from "@/lib/listings";
-export function SafeImg({ src, alt, className = "", l }: { src: string; alt: string; className?: string; l: Listing }) { // safe img
+export function SafeImg({ src, alt, className = "", l }: { src: string; alt: string; className?: string; l: Listing }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <NoPhoto l={l} className={className} />;
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className={`object-cover ${className}`} />;
 }
-export function ListingPhoto({ l, className = "" }: { l: Listing; className?: string }) { // listing photo
+export function ListingPhoto({ l, className = "" }: { l: Listing; className?: string }) {
   const src = l.photos?.[0];
   if (src) return <SafeImg key={src} src={src} alt={`Photo of ${l.title}`} l={l} className={className} />;
   return <NoPhoto l={l} className={className} />;
@@ -28,7 +28,7 @@ function NoPhoto({ l, className = "" }: { l: Listing; className?: string }) {
     </div>
   );
 }
-export function PremiumBadge({ small = false }: { small?: boolean }) { // premium badge
+export function PremiumBadge({ small = false }: { small?: boolean }) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full bg-[#F5E8CF] font-semibold text-[#7A4B00] ${small ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-xs"}`}
@@ -41,7 +41,7 @@ export function PremiumBadge({ small = false }: { small?: boolean }) { // premiu
     </span>
   );
 }
-export function VerifiedLandlord() { // verified landlord
+export function VerifiedLandlord() {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-vault-soft px-2 py-0.5 text-xs font-medium text-vault">
       <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5 4.8 9 10 3" fill="none" stroke="currentColor" strokeWidth="2" /></svg>
@@ -49,7 +49,7 @@ export function VerifiedLandlord() { // verified landlord
     </span>
   );
 }
-export function EarlyAccessTag({ l, premium }: { l: Listing; premium: boolean }) { // early access tag
+export function EarlyAccessTag({ l, premium }: { l: Listing; premium: boolean }) {
   const hours = earlyAccessHoursLeft(l);
   if (!hours) return null;
   return (
@@ -58,7 +58,7 @@ export function EarlyAccessTag({ l, premium }: { l: Listing; premium: boolean })
     </span>
   );
 }
-export function ListingCard({ l, premium }: { l: Listing; premium: boolean }) { // listing card
+export function ListingCard({ l, premium }: { l: Listing; premium: boolean }) {
   const months = depositMonths(l);
   const trust = trustLine(l);
   const locked = !premium && earlyAccessHoursLeft(l) > 0;

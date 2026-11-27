@@ -39,7 +39,6 @@ export class AuthError extends Error {
     super(message);
   }
 }
-// The password was right; the account also needs a code from an authenticator app (admins).
 export class TwoFactorRequired extends Error {
   constructor(public challenge: string) {
     super("Enter the code from your authenticator app.");
@@ -82,7 +81,7 @@ export function isProfileComplete(u: User): boolean {
 }
 export function validateProfile(p: ProfileInput): Record<string, string> {
   const e: Record<string, string> = {};
-  const NAME = /^[\p{L}\p{M} .'-]*\p{L}[\p{L}\p{M} .'-]*$/u; // letters in any script, spaces and . ' - (same rule as the server)
+  const NAME = /^[\p{L}\p{M} .'-]*\p{L}[\p{L}\p{M} .'-]*$/u;
   const nameHint = "Use letters only (spaces, dots, hyphens and apostrophes are fine).";
   if (!p.firstName.trim()) e.firstName = "Enter your first name.";
   else if (!NAME.test(p.firstName.trim())) e.firstName = nameHint;

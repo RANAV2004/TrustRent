@@ -2,11 +2,11 @@ import enum
 from datetime import datetime, timezone
 from sqlalchemy import JSON, Column, String, Boolean, DateTime, Enum, Integer
 from app.core.database import Base
-class UserRole(str, enum.Enum):  # roles
+class UserRole(str, enum.Enum):
     TENANT = "tenant"
     LANDLORD = "landlord"
     ARBITRATOR = "arbitrator"
-class User(Base):  # user
+class User(Base):
     __tablename__ = "users"
     id = Column(String(36), primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
@@ -30,10 +30,10 @@ class User(Base):  # user
     ban_reason = Column(String(300), nullable=True)
     deleted_at = Column(DateTime, nullable=True)
     password_changed_at = Column(DateTime, nullable=True)
-    is_lawyer = Column(Boolean, default=False)  # approved lawyer accounts, made by an admin
-    must_change_password = Column(Boolean, default=False)  # set when an admin issues the password
-    totp_secret = Column(String(200), nullable=True)  # admin two-step sign-in, encrypted
-    totp_pending = Column(String(200), nullable=True)  # shown as a QR code, not yet confirmed
+    is_lawyer = Column(Boolean, default=False)
+    must_change_password = Column(Boolean, default=False)
+    totp_secret = Column(String(200), nullable=True)
+    totp_pending = Column(String(200), nullable=True)
     totp_enabled_at = Column(DateTime, nullable=True)
-    totp_last_step = Column(Integer, nullable=True)  # a code can't be used twice
-    recovery_codes = Column(JSON, nullable=True)  # hashes of unused one-time codes
+    totp_last_step = Column(Integer, nullable=True)
+    recovery_codes = Column(JSON, nullable=True)

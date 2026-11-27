@@ -11,7 +11,7 @@ import { homeFor, useAuth } from "@/lib/auth-context";
 import { useStore } from "@/lib/local-store";
 import { unreadCount } from "@/lib/messages";
 import { ApiSync } from "@/lib/sync";
-export function Logo() { // logo
+export function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2">
       <svg width="28" height="28" viewBox="0 0 40 40" aria-hidden="true">
@@ -23,7 +23,7 @@ export function Logo() { // logo
     </Link>
   );
 }
-export function AppShell({ children }: { children: ReactNode }) { // app shell
+export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut, setAccountType } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) { // app shell
   const lawyer = user?.accountType === "lawyer";
   const lawyerOutside = lawyer && !pathname.startsWith("/lawyer") && !pathname.startsWith("/legal/") && !pathname.startsWith("/help");
   useEffect(() => {
-    if (lawyerOutside) router.replace("/lawyer"); // lawyer accounts only use the lawyer portal
+    if (lawyerOutside) router.replace("/lawyer");
   }, [lawyerOutside, router]);
   const main: { href: string; label: string; active: boolean; badge?: boolean; count?: number }[] = lawyer
     ? [

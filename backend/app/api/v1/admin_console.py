@@ -17,6 +17,7 @@ from app.services.accounts import account_type, display_name, has_premium, is_ad
 from app.services.ledger import GENESIS, ledger_state
 from app.services.marketplace import message_out
 from app.services import chain
+from app.services.files import delete_public
 from app.services.register import try_rebuild_register
 from app.services.notify import notify
 router = APIRouter(prefix="/admin", tags=["Admin console"])
@@ -46,7 +47,7 @@ def user_row(u: User, listings: int = 0, deposits: int = 0) -> dict:
     }
 async def _counts(db: AsyncSession, column) -> dict[str, int]:
     return dict((await db.execute(select(column, func.count()).group_by(column))).all())
-@router.get("/overview")  # admin overview
+@router.get("/overview")
 async def overview(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     users = list(await db.scalars(select(User)))
     live = [u for u in users if not u.deleted_at]
@@ -85,20 +86,20 @@ async def overview(admin: User = Depends(require_admin), db: AsyncSession = Depe
         "openQueries": int(await db.scalar(select(func.count()).select_from(SupportTicket)
                                            .where(SupportTicket.status != "closed")) or 0),
     }
-@router.get("/users")  # admin users
+@router.get("/users")
 async def users(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     rows = list(await db.scalars(select(User).order_by(User.created_at.desc())))
     listing_counts = await _counts(db, Listing.owner_id)
     tenant = await _counts(db, Deposit.tenant_id)
     owner = await _counts(db, Deposit.owner_id)
     return [user_row(u, listing_counts.get(u.id, 0), tenant.get(u.id, 0) + owner.get(u.id, 0)) for u in rows]
-@router.post("/users/{user_id}/ban")  # ban user
+@router.post("/users/{user_id}/ban")
 async def ban(user_id: str, body: ReasonIn, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     u.banned_at, u.ban_reason = utcnow(), body.reason.strip() or "Broke the TrustRent terms of use"
     await db.commit()
     return {"user": user_row(u)}
-@router.post("/users/{user_id}/unban")  # unban user
+@router.post("/users/{user_id}/unban")
 async def unban(user_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     u.banned_at, u.ban_reason = None, None
@@ -110,7 +111,7 @@ def _remove_local_file(path: str | None) -> None:
             os.remove(path)
         except OSError:
             pass
-@router.delete("/users/{user_id}")  # delete user
+@router.delete("/users/{user_id}")
 async def delete_user(user_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     open_deposit = await db.scalar(select(Deposit.id).where(
@@ -129,10 +130,12 @@ async def delete_user(user_id: str, admin: User = Depends(require_full_admin), d
         for attr in ("photo_path", "id_file_path", "enrolment_file_path"):
             _remove_local_file(getattr(la, attr))
             setattr(la, attr, "")  # documents gone; the decision record stays
+        delete_public(la.public_photo)  # their photo was public: take it offline
+        la.public_photo = None
         la.full_name, la.email, la.phone, la.office_address, la.about = "Deleted user", f"deleted-{u.id[:8]}", "", "", None
     for att in await db.scalars(select(TicketAttachment).join(SupportTicket, SupportTicket.id == TicketAttachment.ticket_id)
                                 .where(SupportTicket.user_id == u.id)):
-        _remove_local_file(att.file_path)  # their screenshots go; the ticket text stays as a support record
+        _remove_local_file(att.file_path)
         await db.delete(att)
     code = await db.get(EmailVerification, (u.email or "").lower())
     if code:
@@ -157,7 +160,7 @@ def listing_row(x: Listing, owner: User | None, chats: int) -> dict:
         "owner": {"id": x.owner_id, "name": display_name(owner) if owner else "", "email": owner.email if owner else "",
                   "banned": bool(owner and owner.banned_at)},
     }
-@router.get("/listings")  # admin listings
+@router.get("/listings")
 async def listings(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     rows = list(await db.scalars(select(Listing).order_by(Listing.listed_at.desc())))
     owners = {u.id: u for u in await db.scalars(select(User).where(User.id.in_({r.owner_id for r in rows})))}
@@ -168,7 +171,7 @@ async def _listing(db: AsyncSession, listing_id: str) -> Listing:
     if not x or x.status == "removed":
         raise HTTPException(status_code=404, detail="Listing not found")
     return x
-@router.post("/listings/{listing_id}/unlist")  # unlist home
+@router.post("/listings/{listing_id}/unlist")
 async def unlist(listing_id: str, body: ReasonIn, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     x = await _listing(db, listing_id)
     x.status, x.admin_note = "blocked", body.reason.strip() or "it breaks the TrustRent listing rules"
@@ -177,13 +180,13 @@ async def unlist(listing_id: str, body: ReasonIn, admin: User = Depends(require_
     notify(owner, f"Your listing was unlisted: {x.title}", [
         f"TrustRent took {x.title} off search. Reason: {x.admin_note}.", "Contact TrustRent support to get it relisted."], "/owner")
     return listing_row(x, owner, 0)
-@router.post("/listings/{listing_id}/relist")  # relist home
+@router.post("/listings/{listing_id}/relist")
 async def relist(listing_id: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     x = await _listing(db, listing_id)
     x.status, x.admin_note = "live", None
     await db.commit()
     return listing_row(x, await db.get(User, x.owner_id), 0)
-@router.get("/conversations")  # admin chats
+@router.get("/conversations")
 async def conversations(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     convs = list(await db.scalars(select(Conversation).order_by(Conversation.updated_at.desc())))
     ids = {c.seeker_id for c in convs} | {c.owner_id for c in convs}
@@ -202,7 +205,7 @@ async def conversations(admin: User = Depends(require_admin), db: AsyncSession =
             "last": (last.text or ("Visit request" if last.kind == "visit" else "")) if last else "",
         })
     return out
-@router.get("/conversations/{cid}/messages")  # chat messages
+@router.get("/conversations/{cid}/messages")
 async def conversation_messages(cid: str, admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     c = await db.get(Conversation, cid)
     if not c:
@@ -211,7 +214,7 @@ async def conversation_messages(cid: str, admin: User = Depends(require_admin), 
     people = {u.id: u for u in await db.scalars(select(User).where(User.id.in_({c.seeker_id, c.owner_id})))}
     return [message_out(m, display_name(people[m.sender_id]) if m.sender_id in people else "") | {
         "from": "seeker" if m.sender_id == c.seeker_id else "owner"} for m in rows]
-@router.get("/premium")  # admin premium
+@router.get("/premium")
 async def premium(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     members = list(await db.scalars(select(User).where(User.premium_plan.is_not(None), User.deleted_at.is_(None))
                                     .order_by(User.premium_until.desc())))
@@ -229,7 +232,7 @@ async def premium(admin: User = Depends(require_admin), db: AsyncSession = Depen
             "plan": PLAN_LABEL.get(p.ref, p.ref), "amount": p.amount, "provider": p.provider, "paidAt": iso(p.paid_at),
         } for p in pays],
     }
-@router.post("/premium/{user_id}/revoke")  # revoke premium
+@router.post("/premium/{user_id}/revoke")
 async def revoke_premium(user_id: str, admin: User = Depends(require_full_admin), db: AsyncSession = Depends(get_db)):
     u = await _target(db, user_id, admin)
     if not has_premium(u):
@@ -237,7 +240,7 @@ async def revoke_premium(user_id: str, admin: User = Depends(require_full_admin)
     u.premium_until = utcnow()
     await db.commit()
     return {"user": user_row(u)}
-@router.get("/ledger")  # ledger
+@router.get("/ledger")
 async def ledger(admin: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     entries, intact = await ledger_state(db)
     return {

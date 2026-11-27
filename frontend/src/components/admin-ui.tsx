@@ -4,7 +4,7 @@ export const when = (iso: string | null | undefined, withTime = false) =>
   iso ? new Date(iso).toLocaleString("en-IN", withTime
     ? { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }
     : { day: "numeric", month: "short", year: "numeric" }) : "NA";
-export function PageHeader({ title, intro, children }: { title: string; intro?: string; children?: ReactNode }) { // page header
+export function PageHeader({ title, intro, children }: { title: string; intro?: string; children?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -15,7 +15,7 @@ export function PageHeader({ title, intro, children }: { title: string; intro?: 
     </div>
   );
 }
-export function Stat({ label, value, note, tone }: { label: string; value: ReactNode; note?: string; tone?: "warn" | "good" }) { // stat
+export function Stat({ label, value, note, tone }: { label: string; value: ReactNode; note?: string; tone?: "warn" | "good" }) {
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface p-4">
       <span className="text-xs tracking-wide text-muted uppercase">{label}</span>
@@ -28,10 +28,10 @@ const PILL = {
   green: "bg-vault-soft text-vault", amber: "bg-amber-soft text-amber", red: "bg-claim-soft text-claim",
   grey: "bg-mist text-muted", dark: "bg-ink text-white",
 };
-export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) { // pill
+export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
   return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${PILL[tone]}`}>{children}</span>;
 }
-export function ConfirmAction({ label, confirmLabel, danger = false, reasonPlaceholder, onConfirm }: { // confirm action
+export function ConfirmAction({ label, confirmLabel, danger = false, reasonPlaceholder, onConfirm }: {
   label: string; confirmLabel: string; danger?: boolean; reasonPlaceholder?: string;
   onConfirm: (reason: string) => Promise<unknown>;
 }) {
@@ -61,10 +61,10 @@ export function ConfirmAction({ label, confirmLabel, danger = false, reasonPlace
     </span>
   );
 }
-export function Loading({ error }: { error?: string | null }) { // loading
+export function Loading({ error }: { error?: string | null }) {
   return error ? <p role="alert" className="text-sm text-claim">{error}</p> : <p className="text-sm text-muted">Loading...</p>;
 }
-export function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) { // search
+export function Search({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
       className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm sm:w-72" />

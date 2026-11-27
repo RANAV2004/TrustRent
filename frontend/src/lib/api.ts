@@ -58,7 +58,7 @@ export async function api<T>(path: string, { method, json, form }: CallOptions =
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401 && token && !path.startsWith("/auth/")) { // signed out elsewhere or the session ran out: send the user to sign in
+  if (res.status === 401 && token && !path.startsWith("/auth/")) {
     setToken(null);
     if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     throw new ApiError("Your session has ended. Please sign in again.", 401);

@@ -22,7 +22,7 @@ export interface ConditionSet {
 }
 export const STAGE_LABEL: Record<Stage, string> = { move_in: "Move-in", move_out: "Move-out" };
 export const getPhotos = (depositId: string) => api<ConditionSet>(`/deposits/${depositId}/photos`);
-export function uploadPhoto(depositId: string, stage: Stage, room: string, note: string, file: File) { // photo upload
+export function uploadPhoto(depositId: string, stage: Stage, room: string, note: string, file: File) {
   const form = new FormData();
   form.set("stage", stage);
   form.set("room", room);
@@ -30,7 +30,7 @@ export function uploadPhoto(depositId: string, stage: Stage, room: string, note:
   form.set("file", file);
   return api<ConditionPhoto>(`/deposits/${depositId}/photos`, { form });
 }
-export async function photoBlobUrl(depositId: string, photoId: string): Promise<string> { // photo file
+export async function photoBlobUrl(depositId: string, photoId: string): Promise<string> {
   const token = getToken();
   const res = await fetch(`${API_URL}/deposits/${depositId}/photos/${photoId}/file`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

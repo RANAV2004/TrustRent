@@ -7,7 +7,7 @@ import { formatINR } from "@/lib/format";
 const STATUS: Record<AdminListing["status"], [string, "green" | "grey" | "red" | "amber"]> = {
   live: ["Live", "green"], paused: ["Paused by owner", "grey"], blocked: ["Unlisted by admin", "red"], removed: ["Removed", "grey"],
 };
-export default function AdminListingsPage() { // admin listings
+export default function AdminListingsPage() {
   const [rows, setRows] = useState<AdminListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");

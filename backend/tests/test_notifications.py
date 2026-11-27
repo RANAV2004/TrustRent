@@ -8,15 +8,12 @@ from tests.test_marketplace import owner_with_listing, signup, slot
 
 JPG = b"\xff\xd8\xffphoto"
 
-
 async def settle():
     for _ in range(10):
         await asyncio.sleep(0)
 
-
 def to(email: str) -> list[dict]:
     return [m for m in MAILS if m["to"] == email]
-
 
 async def test_chat_and_visit_emails(client, monkeypatch):
     monkeypatch.setattr(settings, "APP_URL", "https://trustrent.in")
@@ -34,14 +31,12 @@ async def test_chat_and_visit_emails(client, monkeypatch):
         await client.post(f"/api/v1/conversations/{conv['id']}/messages", headers=th, json={"text": text})
     await settle()
     chat = to(owner["email"])
-    assert len(chat) == 1  # one email per conversation every 15 minutes
+    assert len(chat) == 1
     assert chat[0]["subject"] == "New message from Riya Sharma" and "Is it still available?" in chat[0]["body"]
     assert "https://trustrent.in/messages" in chat[0]["body"]
-    # the owner is reading the chat: no email for the tenant's next reply... and the tenant just wrote, so no email to them
     await client.post(f"/api/v1/conversations/{conv['id']}/messages", headers=oh, json={"text": "Yes, it is."})
     await settle()
     assert to(tenant["email"]) == []
-    # visit requests always email, and the answer goes back
     visit = (await client.post(f"/api/v1/conversations/{conv['id']}/messages", headers=th,
                                json={"kind": "visit", "slots": [slot(2)]})).json()
     await client.post(f"/api/v1/messages/{visit['id']}/visit-response", headers=oh, json={"accept": True, "slot": visit["visit"]["slots"][0]})
@@ -49,7 +44,6 @@ async def test_chat_and_visit_emails(client, monkeypatch):
     assert any(m["subject"].startswith("Visit request for") for m in to(owner["email"]))
     confirmed = [m for m in to(tenant["email"]) if m["subject"].startswith("Visit confirmed")]
     assert confirmed and "IST" in confirmed[0]["body"]
-
 
 async def test_deposit_emails(client):
     ah = await admin_headers(client)
@@ -71,7 +65,6 @@ async def test_deposit_emails(client):
     assert "Rs 4,000" in proposal["body"] and "Rs 30,000" in proposal["body"] and "Broken window" in proposal["body"]
     assert any(m["subject"] == f"[TrustRent admin] Deposit {dep_id} is disputed" for m in to(settings.ADMIN_EMAILS[0]))
 
-
 async def test_verification_emails(client, monkeypatch):
     ah = await admin_headers(client)
     user, uh = await signup(client)
@@ -85,7 +78,6 @@ async def test_verification_emails(client, monkeypatch):
     await settle()
     rejected = [m for m in to(user["email"]) if m["subject"] == "We couldn't verify your ID"]
     assert rejected and "Photo is blurry" in rejected[0]["body"]
-
 
 async def test_lawyer_emails(client):
     ah = await admin_headers(client)
@@ -108,7 +100,6 @@ async def test_lawyer_emails(client):
     assert any(m["subject"].startswith("New agreement request from") for m in to(ldata["email"]))
     assert any(m["subject"].endswith("sent you a document") for m in to(owner["email"]))
     assert any(m["subject"].endswith("shared a rental agreement with you") for m in to(tenant["email"]))
-
 
 async def test_no_emails_to_demo_banned_or_when_switched_off(client, monkeypatch):
     ah = await admin_headers(client)

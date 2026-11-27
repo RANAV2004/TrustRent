@@ -9,7 +9,7 @@ const HOW = [
   "New homes still show in everyone's search, with a \"Premium only\" tag until the 48 hours end.",
   "Buying again adds days on top of the current plan. Plans don't renew by themselves.",
 ];
-export default function AdminPremiumPage() { // admin premium
+export default function AdminPremiumPage() {
   const [data, setData] = useState<AdminPremium | null>(null);
   const [error, setError] = useState<string | null>(null);
   const load = () => getPremium().then(setData, (e) => setError(e.message));

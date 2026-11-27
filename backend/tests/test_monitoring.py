@@ -6,7 +6,6 @@ from app.core.database import get_db
 from app.main import app
 from app.services import monitoring
 
-
 @pytest.fixture
 def alerts(monkeypatch):
     sent = []
@@ -16,11 +15,9 @@ def alerts(monkeypatch):
     monkeypatch.setattr("app.services.mailer.send_message_email", fake_send)
     return sent
 
-
 async def settle():
     for _ in range(5):
         await asyncio.sleep(0)
-
 
 async def test_health_reports_database(client, alerts):
     ok = await client.get("/api/v1/health")
@@ -41,7 +38,6 @@ async def test_health_reports_database(client, alerts):
     await settle()
     assert alerts and alerts[0]["subject"] == "[TrustRent alert] Database unreachable"
 
-
 async def test_server_errors_alert_admins_once(alerts, monkeypatch):
     def crash():
         raise RuntimeError("boom")
@@ -52,12 +48,11 @@ async def test_server_errors_alert_admins_once(alerts, monkeypatch):
             res = await ac.get("/api/v1/config")
             assert res.status_code == 500
             assert "Something went wrong on our side" in res.json()["detail"]["message"]
-            assert "boom" not in res.text  # no internals leak to users
+            assert "boom" not in res.text
     await settle()
     mine = [a for a in alerts if "GET /api/v1/config" in a["subject"]]
-    assert len(mine) == len(settings.ADMIN_EMAILS)  # one email per admin, not one per crash
+    assert len(mine) == len(settings.ADMIN_EMAILS)
     assert "RuntimeError" in mine[0]["body"] and mine[0]["to"] == settings.ADMIN_EMAILS[0]
-
 
 async def test_alerts_can_go_elsewhere_or_be_switched_off(alerts, monkeypatch):
     monkeypatch.setattr(settings, "ERROR_ALERT_EMAILS", ["ops@example.com"])
@@ -69,17 +64,15 @@ async def test_alerts_can_go_elsewhere_or_be_switched_off(alerts, monkeypatch):
     await settle()
     assert len(alerts) == 1
 
-
 async def test_browser_error_reports(client, caplog):
     body = {"message": "TypeError: x is undefined", "url": "https://trustrent.in/deposits?token=secret", "stack": "at a()"}
     res = await client.post("/api/v1/client-errors", json=body)
     assert res.status_code == 204
     assert "Browser error on /deposits: TypeError: x is undefined" in caplog.text and "secret" not in caplog.text
-    for _ in range(25):  # rate limited, but always a quiet 204
+    for _ in range(25):
         assert (await client.post("/api/v1/client-errors", json=body)).status_code == 204
     assert caplog.text.count("Browser error on") == 20
     assert (await client.post("/api/v1/client-errors", json={"message": "x" * 600})).status_code == 422
-
 
 def test_sentry_events_are_scrubbed():
     event = {"request": {"data": {"password": "p"}, "cookies": "c", "query_string": "q",
@@ -87,4 +80,4 @@ def test_sentry_events_are_scrubbed():
     out = monitoring._scrub(event, None)
     assert "data" not in out["request"] and "cookies" not in out["request"] and "user" not in out
     assert out["request"]["headers"] == {"Authorization": "[removed]", "User-Agent": "ua"}
-    assert monitoring.init_sentry() is False  # off without SENTRY_DSN
+    assert monitoring.init_sentry() is False

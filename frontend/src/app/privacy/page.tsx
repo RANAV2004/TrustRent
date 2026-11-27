@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Contact, GRIEVANCE_OFFICER, LegalPage } from "@/components/legal-page";
 export const metadata: Metadata = { title: "TrustRent Privacy Policy" };
-export default function PrivacyPage() { // privacy
+export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy">
       <p>TrustRent helps people in India find verified rental homes and keeps security deposits on a tamper-proof record. This policy explains what personal data we collect, why, who we share it with, and the rights you have under the Digital Personal Data Protection Act, 2023 (DPDP Act).</p>

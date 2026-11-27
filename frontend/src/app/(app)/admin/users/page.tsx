@@ -4,7 +4,7 @@ import { ConfirmAction, Loading, PageHeader, Pill, Search, when } from "@/compon
 import { AdminUser, banUser, deleteUser, getUsers, unbanUser } from "@/lib/admin";
 type Filter = "all" | "seeker" | "owner" | "lawyer" | "premium" | "banned";
 const FILTERS: [Filter, string][] = [["all", "All"], ["seeker", "Looking for a home"], ["owner", "Owners"], ["lawyer", "Lawyers"], ["premium", "Premium"], ["banned", "Banned"]];
-export default function AdminUsersPage() { // admin users
+export default function AdminUsersPage() {
   const [rows, setRows] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");

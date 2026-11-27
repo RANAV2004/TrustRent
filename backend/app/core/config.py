@@ -4,13 +4,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 _BACKEND_DIR = Path(__file__).resolve().parents[2]
 ENV_FILES = (_BACKEND_DIR.parent / ".env", _BACKEND_DIR / ".env", Path(".env"))
-class Settings(BaseSettings):  # settings
+class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
     JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60  # sign-ins last a week; a password reset ends them early
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 7 * 24 * 60
     DATABASE_URL: str = "sqlite+aiosqlite:///./trustrent.db"
     POLYGON_AMOY_RPC_URL: str = "https://rpc-amoy.polygon.technology"
     CHAIN_ID: int = 80002
@@ -20,7 +20,7 @@ class Settings(BaseSettings):  # settings
     TENANCY_FACTORY_ADDRESS: str = Field(default="")
     STORAGE_PROVIDER: str = "local"
     STORAGE_LOCAL_DIR: str = "./local_storage"
-    STORAGE_MASTER_KEY_HEX: str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"  # demo only
+    STORAGE_MASTER_KEY_HEX: str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     DEMO_MODE: bool = True
     GOOGLE_CLIENT_ID: str = ""
     MEDIA_DIR: str = "./media"
@@ -38,12 +38,12 @@ class Settings(BaseSettings):  # settings
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
-    ADMIN_TWO_FACTOR: str = "required"  # "required": admins must use an authenticator app; "optional"
-    SENTRY_DSN: str = ""  # optional: error tracking at sentry.io
-    ERROR_ALERTS: bool = True  # email the admins when the server hits an error
-    ERROR_ALERT_EMAILS: List[str] = []  # who gets the alerts; empty means ADMIN_EMAILS
-    EMAIL_NOTIFICATIONS: bool = True  # emails about new messages, visits, deposits and decisions
-    APP_URL: str = ""  # the website address, used in emails, e.g. https://trustrent.in
+    ADMIN_TWO_FACTOR: str = "required"
+    SENTRY_DSN: str = ""
+    ERROR_ALERTS: bool = True
+    ERROR_ALERT_EMAILS: List[str] = []
+    EMAIL_NOTIFICATIONS: bool = True
+    APP_URL: str = ""
     S3_ENDPOINT_URL: str = ""
     S3_REGION: str = "auto"
     S3_ACCESS_KEY_ID: str = ""
@@ -62,7 +62,7 @@ class Settings(BaseSettings):  # settings
 PUBLIC_STORAGE_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 UNSAFE_JWT_SECRETS = {"", "super-secret-jwt-key-change-in-production-min-32-chars", "change-me", "change-this-to-a-long-random-secret-min-32-chars"}
 settings = Settings()
-if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:  # never sign with a known key
+if settings.JWT_SECRET in UNSAFE_JWT_SECRETS or len(settings.JWT_SECRET) < 32:
     import logging
     import secrets
     logging.getLogger(__name__).warning("JWT_SECRET is missing or weak; using a random key. Sign-ins reset on restart. Set JWT_SECRET in .env.")
@@ -72,7 +72,7 @@ def _valid_key(hex_key: str) -> bool:
         return len(bytes.fromhex(hex_key)) == 32
     except ValueError:
         return False
-def production_problems() -> list[str]:  # settings that must be fixed before real users arrive
+def production_problems() -> list[str]:
     problems = []
     if not _valid_key(settings.STORAGE_MASTER_KEY_HEX):
         problems.append("STORAGE_MASTER_KEY_HEX must be 64 hex characters (32 bytes).")

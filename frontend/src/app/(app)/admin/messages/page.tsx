@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loading, PageHeader, Search, when } from "@/components/admin-ui";
 import { AdminConversation, AdminMessage, getConversationMessages, getConversations } from "@/lib/admin";
-export default function AdminMessagesPage() { // admin chats
+export default function AdminMessagesPage() {
   const [convs, setConvs] = useState<AdminConversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");

@@ -55,7 +55,7 @@ export function TwoFactorSetup({ required, onFinished }: { required: boolean; on
     setBusy(true);
     try {
       const r = await confirmTwoFactor(code.trim());
-      setToken(r.access_token); // this session has now passed the authenticator check
+      setToken(r.access_token);
       setCodes(r.recoveryCodes);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't check the code. Try again.");

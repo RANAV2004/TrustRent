@@ -49,7 +49,7 @@ function VerificationCard({ status, note }: { status: string; note?: string }) {
     </section>
   );
 }
-export default function OwnerDashboard() { // owner dashboard
+export default function OwnerDashboard() {
   const { user } = useAuth();
   const uidv = user?.id ?? "";
   const [actionError, setActionError] = useState<string | null>(null);

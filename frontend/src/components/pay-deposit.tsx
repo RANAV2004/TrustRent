@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { createOrder, Order, PaymentResult } from "@/lib/deposits";
 import { formatINR } from "@/lib/format";
 import type { Listing } from "@/lib/listings";
-export function PayDepositCard({ l }: { l: Listing }) { // pay deposit card
+export function PayDepositCard({ l }: { l: Listing }) {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
