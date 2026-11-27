@@ -42,6 +42,10 @@ Screenshots are stored in `Docs/screenshots`.
 
 ![Sign up](Docs/screenshots/sign-up.png)
 
+### Forgot password
+
+![Forgot password](Docs/screenshots/forgot-password.png)
+
 ### Search homes
 
 ![Search](Docs/screenshots/search.png)
@@ -62,13 +66,45 @@ Screenshots are stored in `Docs/screenshots`.
 
 ![Deposits](Docs/screenshots/deposits.png)
 
+### Move-in and move-out photos
+
+![Condition photos](Docs/screenshots/condition-photos.png)
+
+### Rental agreements shared with the tenant
+
+![Agreements](Docs/screenshots/agreements.png)
+
 ### Owner dashboard
 
 ![Owner dashboard](Docs/screenshots/owner-dashboard.png)
 
+### Find a verified lawyer
+
+![Lawyer directory](Docs/screenshots/owner-lawyers.png)
+
+### Owner and lawyer chat with the agreement PDF
+
+![Legal case](Docs/screenshots/legal-case.png)
+
 ### Premium
 
 ![Premium](Docs/screenshots/premium.png)
+
+### Lawyer application
+
+![Lawyer application](Docs/screenshots/lawyer-apply.png)
+
+### Lawyer portal
+
+![Lawyer portal](Docs/screenshots/lawyer-portal.png)
+
+### Help and support
+
+![Help and support](Docs/screenshots/help.png)
+
+### Support ticket
+
+![Support ticket](Docs/screenshots/help-ticket.png)
 
 ### Admin console overview
 
@@ -81,6 +117,22 @@ Screenshots are stored in `Docs/screenshots`.
 ### Admin users
 
 ![Admin users](Docs/screenshots/admin-users.png)
+
+### Admin two-step sign-in
+
+![Admin two-step sign-in](Docs/screenshots/admin-two-step.png)
+
+### Admin photo comparison and receipt chain
+
+![Admin photo comparison](Docs/screenshots/admin-condition-photos.png)
+
+### Admin legal desk
+
+![Admin legal desk](Docs/screenshots/admin-legal.png)
+
+### Admin support queries
+
+![Admin support queries](Docs/screenshots/admin-queries.png)
 
 ## Features
 
