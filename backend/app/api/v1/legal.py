@@ -27,7 +27,7 @@ from app.models.legal import Agreement, AgreementShare, LawyerApplication, Legal
 from app.models.marketplace import Conversation, Listing, utcnow
 from app.models.user import User, UserRole
 from app.services.accounts import account_type, admin_unlocked, display_name, hash_secret, is_admin, iso, normalise_phone
-from app.services.files import content_disposition, private_storage, read_private, save_public
+from app.services.files import private_storage, read_private, save_public
 from app.services.hash_service import HashService
 from app.services.mailer import (
     EmailError, build_lawyer_approved_email, build_lawyer_rejected_email, email_enabled,
@@ -500,7 +500,7 @@ async def agreement_file(agreement_id: str, user: User = Depends(get_current_use
     except FileNotFoundError:
         raise HTTPException(status_code=410, detail="This document is no longer stored on the server") from None
     return Response(content=content, media_type="application/pdf", headers={
-        "Content-Disposition": content_disposition("attachment", a.file_name, "agreement"),
+        "Content-Disposition": f'attachment; filename="{a.file_name}"',
         "Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store",
     })
 

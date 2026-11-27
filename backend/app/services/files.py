@@ -1,5 +1,4 @@
 from pathlib import Path
-from urllib.parse import quote
 from app.core.config import settings
 from app.services.storage.base import StorageProvider
 from app.services.storage.local_encrypted import LocalEncryptedStorageProvider
@@ -13,14 +12,6 @@ def read_private(reference: str, iv_hex: str) -> bytes:
         from app.services.storage.s3_encrypted import S3EncryptedStorageProvider
         return S3EncryptedStorageProvider().retrieve(reference, iv_hex)
     return LocalEncryptedStorageProvider().retrieve(reference, iv_hex)
-def content_disposition(kind: str, name: str, fallback: str = "document") -> str:
-    """A header that works for any file name: plain ASCII for old browsers, the real (e.g. Hindi) name for the rest."""
-    clean = "".join(c for c in (name or "") if c.isalnum() or c in "._- ").strip()[:120] or fallback
-    stem, dot, ext = clean.rpartition(".") if "." in clean else (clean, "", "")
-    ascii_stem = "".join(c for c in stem if c.isascii()).strip(" .") or fallback
-    ascii_ext = "".join(c for c in ext if c.isascii())
-    ascii_name = ascii_stem + (f".{ascii_ext}" if dot and ascii_ext else "")
-    return f"{kind}; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(clean)}"
 def delete_public(reference: str | None) -> None:
     """Remove a public file (e.g. a lawyer's photo) from the public bucket or the media folder."""
     if not reference:
