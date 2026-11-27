@@ -53,6 +53,8 @@ async def _deposit_listing(db: AsyncSession, user: User, listing_id: str | None)
                                                        Deposit.status != "settled"))
     if open_dep:
         raise field_error(f"You already have an active deposit for this home ({open_dep}).", None, status.HTTP_409_CONFLICT)
+    if (listing.deposit or 0) <= 0:
+        raise field_error("This home asks for no security deposit, so there's nothing to pay.")
     return listing
 @router.post("/payments/order")  # payment order
 async def create_order(body: OrderIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):

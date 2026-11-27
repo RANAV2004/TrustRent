@@ -17,6 +17,7 @@ from app.services.accounts import account_type, display_name, has_premium, is_ad
 from app.services.ledger import GENESIS, ledger_state
 from app.services.marketplace import message_out
 from app.services import chain
+from app.services.files import delete_public
 from app.services.register import try_rebuild_register
 from app.services.notify import notify
 router = APIRouter(prefix="/admin", tags=["Admin console"])
@@ -129,6 +130,8 @@ async def delete_user(user_id: str, admin: User = Depends(require_full_admin), d
         for attr in ("photo_path", "id_file_path", "enrolment_file_path"):
             _remove_local_file(getattr(la, attr))
             setattr(la, attr, "")  # documents gone; the decision record stays
+        delete_public(la.public_photo)  # their photo was public: take it offline
+        la.public_photo = None
         la.full_name, la.email, la.phone, la.office_address, la.about = "Deleted user", f"deleted-{u.id[:8]}", "", "", None
     for att in await db.scalars(select(TicketAttachment).join(SupportTicket, SupportTicket.id == TicketAttachment.ticket_id)
                                 .where(SupportTicket.user_id == u.id)):

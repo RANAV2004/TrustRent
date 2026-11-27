@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import production_problems, production_warnings, settings
-from app.services.monitoring import alert, init_sentry
+from app.services.monitoring import alert, init_sentry, report_exception
 from app.core.database import engine, Base, AsyncSessionLocal, add_missing_columns
 from app.api.v1 import health, support, two_factor
 from app.api.v1 import accounts, listings, owner, messages, admin, admin_console, payments, deposits, condition, legal
@@ -60,20 +60,26 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 }
-@app.exception_handler(Exception)
-async def unexpected_error(request: Request, exc: Exception):  # a bug: tell the admins, give the user a clear message
+def _server_error(request: Request, exc: Exception) -> JSONResponse:  # a bug: tell the admins, give the user a clear message
     route = "/".join("{id}" if any(c.isdigit() for c in part) and len(part) >= 6 else part
                      for part in request.url.path.split("/"))  # IDs out, so one bug = one alert
+    report_exception(exc)
     alert(f"500:{request.method}:{route}:{type(exc).__name__}", f"Server error on {request.method} {route}",
           f"{type(exc).__name__} while handling {request.method} {route}. Users saw 'Something went wrong'.")
     return JSONResponse({"detail": {"message": "Something went wrong on our side. We've been alerted. Try again shortly.",
                                     "field": None}}, status_code=500)
+@app.exception_handler(Exception)
+async def unexpected_error(request: Request, exc: Exception):  # last resort, outside the CORS layer
+    return _server_error(request, exc)
 @app.middleware("http")
 async def guard_requests(request: Request, call_next):
     length = request.headers.get("content-length")
     if length and length.isdigit() and int(length) > MAX_REQUEST_BYTES:
         return JSONResponse({"detail": {"message": "The upload is too large.", "field": None}}, status_code=413)
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as exc:  # noqa: BLE001 - handled here, inside CORS, so the browser can read the message
+        response = _server_error(request, exc)
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
     if request.url.scheme == "https":

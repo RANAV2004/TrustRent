@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AuthFrame, FormError, PasswordField, SecondaryLink, SubmitButton, TextField } from "@/components/auth-ui";
-import { AuthError } from "@/lib/auth";
+import { AuthError, TwoFactorRequired } from "@/lib/auth";
 import { afterSignIn, useAuth } from "@/lib/auth-context";
 
 export default function LawyerLoginPage() { // lawyer sign in
@@ -34,6 +34,10 @@ export default function LawyerLoginPage() { // lawyer sign in
       router.replace(afterSignIn(u, null));
     } catch (err) {
       signingIn.current = false;
+      if (err instanceof TwoFactorRequired) { // an admin account: two-step sign-in lives on the main page
+        setError("This isn't a lawyer account. Use the main sign-in page instead.");
+        return;
+      }
       setError(err instanceof AuthError ? err.message : "Could not sign you in. Try again.");
     } finally {
       setBusy(false);

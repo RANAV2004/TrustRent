@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.models.marketplace import IdentitySubmission, OwnerApplication, utcnow
 from app.models.user import User
 from app.services.accounts import admin_unlocked, display_name, iso, is_admin
-from app.services.files import read_private
+from app.services.files import content_disposition, read_private
 from app.services.register import rebuild_register, try_rebuild_register
 from app.services.notify import notify
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -51,10 +51,9 @@ async def verifications(admin: User = Depends(require_full_admin), db: AsyncSess
     }
 def _file_response(content: bytes, name: str) -> Response:
     media = mimetypes.guess_type(name or "")[0] or "application/octet-stream"
-    safe = "".join(c for c in (name or "document") if c.isalnum() or c in "._- ")[:100] or "document"
     inline = media in SAFE_INLINE  # never render uploaded HTML or SVG in the admin's browser
     return Response(content=content, media_type=media if inline else "application/octet-stream", headers={
-        "Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{safe}"',
+        "Content-Disposition": content_disposition("inline" if inline else "attachment", name),
         "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store",

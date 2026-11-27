@@ -25,8 +25,8 @@ services:
         value: "False"
       - key: SEED_SAMPLE_LISTINGS
         value: "False"
-      - key: ADMIN_EMAILS
-        value: '["admin@trustrent.in"]'
+      - key: ADMIN_EMAILS  # e.g. ["trustrent@gmail.com"]
+        sync: false
       - key: DEMO_ADMIN_PASSWORD
         sync: false
       - key: SMTP_HOST
@@ -35,8 +35,10 @@ services:
         value: "2525"
       - key: SMTP_USER
         sync: false
-      - key: SMTP_FROM_EMAIL
-        value: trustrent.otp@gmail.com
+      - key: SMTP_FROM_EMAIL  # the sender address you verified in Brevo
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: TrustRent
       - key: SMTP_APP_PASSWORD
         sync: false
       - key: STORAGE_MASTER_KEY_HEX

@@ -52,6 +52,16 @@ def report_to_sentry(message: str, level: str = "error") -> None:
         pass
 
 
+def report_exception(exc: BaseException) -> None:
+    if not settings.SENTRY_DSN:
+        return
+    try:
+        import sentry_sdk
+        sentry_sdk.capture_exception(exc)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def alert_recipients() -> list[str]:
     return settings.ERROR_ALERT_EMAILS or settings.ADMIN_EMAILS
 

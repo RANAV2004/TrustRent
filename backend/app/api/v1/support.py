@@ -133,10 +133,11 @@ async def raise_ticket(
     desc = description.strip()
     if not 20 <= len(desc) <= 4000:
         raise field_error("Describe the problem in at least 20 characters (up to 4000).", "description")
-    if not TICKETS_PER_USER.allow(user.id):
+    if TICKETS_PER_USER.blocked(user.id):
         raise field_error("You've raised a lot of queries today. Add to an open ticket instead, or try tomorrow.", None,
                           status.HTTP_429_TOO_MANY_REQUESTS)
-    pics = await _images(images)
+    pics = await _images(images)  # a rejected screenshot doesn't use up the daily allowance
+    TICKETS_PER_USER.hit(user.id)
     now = utcnow()
     t = SupportTicket(id=await _new_ticket_no(db), user_id=user.id, category=category, subject=subj, description=desc,
                       page_url=pageUrl.strip()[:300] or None, status="open", created_at=now, updated_at=now)

@@ -68,6 +68,8 @@ async def seed_demo_admin(db: AsyncSession) -> None:
     email = settings.ADMIN_EMAILS[0].lower()
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
+        if existing.password_changed_at and existing.password_hash:  # the admin chose their own password: keep it
+            return
         if not verify_secret(settings.DEMO_ADMIN_PASSWORD, existing.password_hash):  # password from .env
             existing.password_hash = hash_secret(settings.DEMO_ADMIN_PASSWORD)
             await db.commit()
