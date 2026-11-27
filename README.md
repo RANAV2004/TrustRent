@@ -2,7 +2,7 @@
 
 A blockchain-based security deposit escrow and verified tenancy system for the Indian rental market.
 
-# Table of Contents
+## Table of Contents
 
 1. [Overview](#overview)
 2. [Screenshots](#screenshots)
@@ -19,163 +19,196 @@ A blockchain-based security deposit escrow and verified tenancy system for the I
 13. [Team](#team)
 14. [License](#license)
 
-# Overview
+## Overview
 
 Renting a home in India usually means paying a security deposit of two to ten months of rent directly to the landlord. At move-out, deductions are often decided by one side alone, records are kept on paper or in chat messages, and tenants have little proof of what was paid or agreed.
 
-TrustRent addresses this in three ways:
+TrustRent addresses this in four ways:
 
-- **Verified people.** Every renter and owner confirms their email at sign-up. Owners submit identity and property documents, which an admin reviews before any home goes live.
+- **Verified people.** Every renter and owner confirms their email at sign-up. Owners submit identity and property documents, which an admin reviews before any home goes live. Lawyers are checked against their Bar Council enrolment before they can take work.
 - **Tamper-proof deposit receipts.** Each deposit and each settlement is recorded as a cryptographic fingerprint in a hash-chained ledger, and optionally on the Polygon blockchain. Anyone can later check that the amount and details have not been changed.
-- **A fair settlement process.** The owner proposes a deduction with a reason, the tenant accepts or disputes it, and disputed cases are settled by an admin. Every step is added to the receipt chain.
+- **Evidence of the home's condition.** Tenant and owner both photograph every room at move-in and move-out. The photos are fingerprinted into the same receipt chain, so they cannot be swapped or edited later.
+- **A fair settlement process.** The owner proposes a deduction with a reason, the tenant accepts or disputes it, and disputed cases are settled by an admin who can compare the photos side by side. Every step is added to the receipt chain.
 
-# Screenshots
+## Screenshots
 
 Screenshots are stored in `Docs/screenshots`.
 
-# Sign in
+### Sign in
 
 ![Sign in](Docs/screenshots/sign-in.png)
 
-# Sign up with email verification
+### Sign up with email verification
 
 ![Sign up](Docs/screenshots/sign-up.png)
 
-# Search homes
+### Search homes
 
 ![Search](Docs/screenshots/search.png)
 
-# Search results
+### Search results
 
 ![Search results](Docs/screenshots/search-results.png)
 
-# Listing details
+### Listing details
 
 ![Listing details](Docs/screenshots/listing.png)
 
-# Messages and visit booking
+### Messages and visit booking
 
 ![Messages](Docs/screenshots/messages.png)
 
-# Deposits
+### Deposits
 
 ![Deposits](Docs/screenshots/deposits.png)
 
-# Owner dashboard
+### Owner dashboard
 
 ![Owner dashboard](Docs/screenshots/owner-dashboard.png)
 
-# Premium
+### Premium
 
 ![Premium](Docs/screenshots/premium.png)
 
-# Admin console overview
+### Admin console overview
 
 ![Admin overview](Docs/screenshots/admin-overview.png)
 
-# Admin deposits and receipt chain
+### Admin deposits and receipt chain
 
 ![Admin deposits](Docs/screenshots/admin-deposits.png)
 
-# Admin users
+### Admin users
 
 ![Admin users](Docs/screenshots/admin-users.png)
 
 ## Features
 
-# For people looking for a home
+### For people looking for a home
 
-- Sign up with email verification (a six-digit code sent by email) or sign in with Google.
+- Sign up with email verification (a six-digit code sent by email) or sign in with Google, then complete a short profile.
+- Reset a forgotten password with a code sent by email.
 - Search homes by city, area or pin code, with filters for rent, bedrooms, furnishing, facilities and preferred tenants.
 - View listing details, photos, the deposit amount and the owner's deposit track record.
 - Message owners and book visits. The exact address is shown only after a visit is confirmed.
 - Upload an identity document to become a verified user.
 - Pay the security deposit and receive a deposit receipt.
+- Upload move-in and move-out photos of each room. Location data is removed from every photo before it is stored.
 - Accept or dispute a settlement proposed by the owner at move-out.
 - Look up any receipt by deposit ID or receipt hash.
+- Download rental agreements that the owner has shared, each prepared by a verified lawyer.
+- Get email alerts for new messages, visit updates, deposits and settlement decisions.
 
-# For owners
+### For owners
 
 - Apply for owner verification with an identity document and a property document.
 - Add listings with photos, rent, deposit, facilities and availability.
 - Pause, resume or delete listings.
 - Reply to messages and accept or decline visit requests.
+- Upload move-in and move-out photos from the owner's side.
 - Propose a deposit settlement with the deduction and the reason.
+- Find a verified lawyer in the lawyer directory, chat with them and receive the rental agreement as a PDF.
+- Share the finished agreement with a tenant they know through TrustRent.
 
-# Premium
+### For lawyers
+
+- Apply from the sign-in page with an ID proof, Bar Council enrolment certificate and a photo. No account is needed to apply.
+- Check the application status with the reference number and email.
+- Once an admin approves, TrustRent creates the account and emails a username and a temporary password. The lawyer sets their own password at first sign-in.
+- See owners' agreement requests, chat with them and upload the agreement PDF.
+
+### Help and support
+
+- Raise a query from the Help page, choose a category and attach screenshots.
+- Receive a ticket number and follow the conversation with the support team on the ticket page.
+
+### Premium
 
 - Weekly, monthly and quarterly plans.
 - Premium members can contact owners of new listings during the first 48 hours, before everyone else.
 - New listings still appear in everyone's search results, marked as Premium only until the early access period ends.
 
-# Admin console
+### Admin console
 
+- Two-step sign-in for admins: a password plus a six-digit code from an authenticator app, with one-time recovery codes.
 - Overview of users, listings, deposits, messages and Premium revenue.
 - Review owner and identity documents, approve or reject them, and download the verification register as an Excel file.
+- Review lawyer applications, approve or reject them, and issue a new temporary password to a lawyer.
 - Ban, unban or delete user accounts. Deleting removes personal details and documents but keeps financial records.
 - Unlist or relist any home with a reason that the owner can see.
 - Read conversations between renters and owners for safety checks and disputes.
 - View Premium members, plans and payments, and revoke Premium.
-- View all deposits and the full receipt chain, settle disputed deposits and mark owner payouts.
+- View all deposits and the full receipt chain, compare move-in and move-out photos, settle disputed deposits and mark owner payouts.
 - Generate a deposit receipt for a deposit paid outside the app, for example by bank transfer, UPI or cheque.
+- Answer support queries, reply on tickets and close them.
+- Receive email alerts when the server hits an error (optional Sentry tracking as well).
 
-# How Deposit Receipts Work
+### Coming soon
 
-1. **Payment.** The tenant pays the deposit through the payment gateway (Razorpay), or an admin records a deposit that was paid outside the app.
+- **HomePref AI:** an assistant that understands a renter's budget, area, size and facilities and suggests the TrustRent homes that fit best. The page is in the app as a preview.
+
+## How Deposit Receipts Work
+
+1. **Payment.** The tenant pays the deposit through the payment gateway (Razorpay), or an admin records a deposit that was paid outside the app. Each payment is checked with Razorpay's signature and applied only once, and a webhook completes payments if the tenant closes the window early.
 2. **Fingerprint.** The deposit details (deposit ID, home, tenant, owner, amount, time and payment reference) are hashed with Keccak-256. Only this fingerprint is recorded. Names and personal data are never written to the chain.
 3. **Linked block.** The fingerprint is stored as a new block that also contains the hash of the previous block. Changing any earlier record breaks every link after it.
-4. **On-chain copy.** When the DepositRegistry contract is configured, the receipt is also written to the Polygon Amoy network.
-5. **Verification.** The receipt lookup page recomputes the fingerprint from the stored details and compares it with the receipt. Any change shows as a mismatch.
-6. **Settlement.** At move-out, the agreed deduction and refund are recorded as a second block linked to the same deposit.
+4. **Condition photos.** Move-in and move-out photos are fingerprinted the same way, so a photo changed after upload fails its check.
+5. **On-chain copy.** When the DepositRegistry contract is configured, the receipt is also written to the Polygon Amoy network.
+6. **Verification.** The receipt lookup page recomputes the fingerprint from the stored details and compares it with the receipt. Any change shows as a mismatch.
+7. **Settlement.** At move-out, the agreed deduction and refund are recorded as a second block linked to the same deposit.
 
-# Technology Stack
+## Technology Stack
 
 | Layer | Technology |
-
+|---|---|
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2 (async), Pydantic |
 | Database | SQLite for local development, PostgreSQL in production |
 | Blockchain | Solidity 0.8.24, Hardhat, OpenZeppelin, Polygon Amoy, web3.py |
-| Authentication | JWT, scrypt password hashing, email verification over SMTP, Google sign-in |
-| Payments | Razorpay (demo checkout available for development) |
+| Authentication | JWT, scrypt password hashing, email verification over SMTP, Google sign-in, TOTP two-step sign-in for admins |
+| Payments | Razorpay with signature checks and webhooks (demo checkout available for development) |
 | File storage | AES-256-GCM encrypted documents on local disk or S3 compatible storage |
+| Email | SMTP for verification codes, password resets, notifications and error alerts |
+| Monitoring | Error alert emails and optional Sentry |
 | Indexing | The Graph subgraph |
-| Testing | Pytest, Hardhat with Mocha and Chai, ESLint, Ruff |
+| Testing and CI | Pytest, Hardhat with Mocha and Chai, ESLint, Ruff, GitHub Actions |
 
-# Repository Structure
+## Repository Structure
 
 | Path | Contents |
-
+|---|---|
 | `frontend/` | Next.js web application |
-| `frontend/src/app/` | Pages for sign in, sign up, search, listings, messages, deposits, premium, owner and admin |
+| `frontend/src/app/` | Pages for sign in, sign up, search, listings, messages, deposits, agreements, help, premium, owner, lawyer and admin |
 | `frontend/src/components/` | Shared interface components |
-| `frontend/src/lib/` | API client, authentication, listings, messages and deposits |
+| `frontend/src/lib/` | API client, authentication, listings, messages, deposits, legal and support |
 | `backend/` | FastAPI service |
-| `backend/app/api/v1/` | REST endpoints |
+| `backend/app/api/v1/` | REST endpoints (accounts, listings, messages, deposits, condition photos, payments, legal, support, two-step sign-in, admin) |
 | `backend/app/models/` | Database models |
-| `backend/app/services/` | Ledger, chain client, email, payments, storage, seed data |
+| `backend/app/services/` | Ledger, chain client, email, notifications, monitoring, payments, storage, TOTP, seed data |
 | `backend/tests/` | Backend test suite |
-| `contracts/` | Solidity contracts, deployment scripts and tests |
+| `backend/scripts/` | Admin maintenance scripts, such as resetting an admin's two-step sign-in |
+| `contracts/` | Solidity contracts (DepositRegistry, DepositVault, TenancyFactory, IdentityRegistry, ArbitratorRegistry, MockINR), deployment scripts and tests |
 | `subgraph/` | The Graph schema and mappings |
 | `scripts/` | Evaluation and hand-off generation scripts |
-| `Docs/` | SRS, synopsis, implementation plan, go-live guide and API reference |
+| `Docs/` | SRS, synopsis, implementation plan, design decisions, go-live guide, API reference and screenshots |
+| `.github/workflows/` | CI pipeline for contracts, backend and frontend |
 
 ## Getting Started
 
-# Prerequisites
+### Prerequisites
 
 - Node.js 20 or later
 - Python 3.12
 - Git
 
-# 1. Clone the repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/RANAV2004/TrustRent.git
 cd TrustRent
 ```
 
-# 2. Create the environment file
+### 2. Create the environment file
 
 Copy `.env.example` to `.env` in the project root and fill in the values you need. See [Configuration](#configuration).
 
@@ -191,7 +224,7 @@ macOS and Linux:
 cp .env.example .env
 ```
 
-# 3. Start the backend
+### 3. Start the backend
 
 Windows (PowerShell):
 
@@ -215,7 +248,7 @@ uvicorn app.main:app --reload --port 8000
 
 The API runs at `http://localhost:8000`, and the interactive API documentation is at `http://localhost:8000/docs` (shown only in demo mode or with `DEBUG=True`). On startup the backend prints whether email verification is configured.
 
-# 4. Start the frontend
+### 4. Start the frontend
 
 In a second terminal:
 
@@ -230,7 +263,7 @@ On Windows, use `Copy-Item .env.example .env.local` instead of `cp`.
 
 Open `http://localhost:3000` in a browser.
 
-# 5. Deploy the contracts (optional)
+### 5. Deploy the contracts (optional)
 
 The application works without a blockchain connection by using the built-in hash-chained ledger. To also write receipts to Polygon Amoy:
 
@@ -253,16 +286,21 @@ The backend reads `.env` from the project root or from the `backend` folder. The
 | `DEMO_MODE` | Enables demo checkout, automatic ID approval and the demo admin account. Set to `False` in production. |
 | `SEED_SAMPLE_LISTINGS` | Loads the sample Indore homes, tenants and deposit receipts. |
 | `ADMIN_EMAILS` | Accounts with these emails can open the admin console. |
-| `SMTP_USER`, `SMTP_APP_PASSWORD` | Gmail address and app password used to send sign-up verification codes. Sign-up is paused without them. |
-| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Live payments. Without them, payments use the demo checkout in demo mode. |
-| `STORAGE_PROVIDER` | `local` or `s3` for encrypted document storage. |
+| `SMTP_USER`, `SMTP_APP_PASSWORD` | Gmail address and app password used to send verification codes, password resets and notifications. Sign-up is paused without them. |
+| `GOOGLE_CLIENT_ID` | Enables Google sign-in. |
+| `APP_URL` | Website address used in emails, such as the lawyer sign-in details. |
+| `ADMIN_TWO_FACTOR` | `required` makes every admin use an authenticator app; `optional` lets them choose. |
+| `EMAIL_NOTIFICATIONS` | Email users about new messages, visits, deposits and decisions. |
+| `ERROR_ALERTS`, `ERROR_ALERT_EMAILS`, `SENTRY_DSN` | Email admins when the server hits an error, with optional Sentry tracking. |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Live payments and the payment webhook. Without them, payments use the demo checkout in demo mode. |
+| `STORAGE_PROVIDER`, `STORAGE_MASTER_KEY_HEX` | `local` or `s3` for encrypted document storage, and the encryption key. Generate your own key before going live. |
 | `DEPOSIT_REGISTRY_ADDRESS`, `CHAIN_SIGNER_PRIVATE_KEY` | Write deposit receipts to the Polygon contract. |
 
 The frontend reads `frontend/.env.local`. Set `NEXT_PUBLIC_API_URL` to `http://localhost:8000/api/v1`.
 
 Never commit `.env` or `.env.local`. Both are listed in `.gitignore`.
 
-# Demo Mode and Sample Data
+## Demo Mode and Sample Data
 
 With `DEMO_MODE=True` and `SEED_SAMPLE_LISTINGS=True`, the backend creates:
 
@@ -271,9 +309,14 @@ With `DEMO_MODE=True` and `SEED_SAMPLE_LISTINGS=True`, the backend creates:
 - Three sample tenants, two of them with Premium.
 - Three deposit receipts: one held, one with a settlement proposed and one settled.
 - An admin account with the username `admin`. Its password is the `DEMO_ADMIN_PASSWORD` value in your `.env` file.
-  Turn both settings off before going live.
+
+Turn both settings off before going live.
+
+If an admin loses both their phone and their recovery codes, turn off their two-step sign-in by running `python scripts/reset_admin_2fa.py admin@example.com` from the `backend` folder.
 
 ## Running Tests
+
+The project has 90 backend tests and 42 smart contract tests. GitHub Actions runs all checks on every push.
 
 Backend:
 
@@ -312,6 +355,8 @@ Step-by-step instructions for hosted PostgreSQL, encrypted file storage, Razorpa
 | [Backlog](BACKLOG.md) | Epics and user stories |
 | [Software Requirements Specification](Docs/TrustRent_SRS.md) | Functional and non-functional requirements |
 | [Synopsis](Docs/Synopsis.md) | Project synopsis |
+| [Design Decisions](Docs/DECISIONS.md) | Key technical decisions and the reasons for them |
+| [Account Abstraction Spike](Docs/AA_INTEGRATION.md) | ERC-4337 account abstraction study for the vault contracts |
 | [Go-Live Guide](Docs/GO_LIVE.md) | Production setup |
 | [Marketplace API](Docs/hand_off/MARKETPLACE_API.md) | Web application endpoints |
 | [OpenAPI Specification](Docs/hand_off/openapi.json) | Full API schema |
@@ -324,7 +369,6 @@ Step-by-step instructions for hosted PostgreSQL, encrypted file storage, Razorpa
 | Akhil Antony | Team member |
 | Sameer Ajay Chauhan | Team member |
 | Vansh Rana | Team member |
-
 
 ## License
 
